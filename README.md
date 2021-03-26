@@ -1,6 +1,6 @@
 # Breakout
  
-Breakout game
+Breakout game in JavaFX
 
 CSPC-24500 Project @ Lewis University
 
