@@ -1,4 +1,4 @@
-# Breakout
+# BreakoutFX
  
 Breakout game in JavaFX
 
