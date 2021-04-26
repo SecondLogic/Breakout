@@ -7,7 +7,7 @@
     Simulation/Vector2.java
  */
 
-package Simulation;
+package Structures;
 
 import java.util.Objects;
 
@@ -56,5 +56,10 @@ public class Vector2 {
     @Override
     public int hashCode() {
         return Objects.hash(x, y);
+    }
+
+    @Override
+    public String toString() {
+        return "(" + this.x + ", " + this.y + ")";
     }
 }

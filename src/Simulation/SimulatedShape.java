@@ -9,12 +9,13 @@
 
 package Simulation;
 
-import javafx.event.EventHandler;
-import javafx.scene.Node;
-import javafx.scene.input.KeyEvent;
+import Structures.BoundingBox;
+import Structures.Vector2;
+import javafx.scene.shape.Shape;
 
 public class SimulatedShape extends BoundingBox {
     protected Vector2 size, position, velocity;
+    private boolean changed;
     private boolean anchored;
     private double mass;
     private SimulationEventHandler<ShapeCollision> onCollide;
@@ -23,12 +24,23 @@ public class SimulatedShape extends BoundingBox {
         this.size = Vector2.ZERO;
         this.position = Vector2.ZERO;
         this.velocity = Vector2.ZERO;
+        this.changed = false;
         this.anchored = true;
         this.mass = 1;
         this.onCollide = null;
     }
 
-    public Node getNode() {
+    public SimulatedShape(Vector2 size, Vector2 position) {
+        super(position.sum(size.product(-.5)), position.sum(size.product(.5)));
+        this.size = size;
+        this.position = position;
+        this.velocity = Vector2.ZERO;
+        this.anchored = true;
+        this.mass = 1;
+        this.onCollide = null;
+    }
+
+    public Shape getNode() {
         return null;
     }
 
@@ -44,6 +56,41 @@ public class SimulatedShape extends BoundingBox {
 
     public void setOnCollide(SimulationEventHandler<ShapeCollision> collisionEvent) {
         this.onCollide = collisionEvent;
+    }
+
+    private void updateBounds() {
+        this.setMin(position.sum(size.product(-.5)));
+        this.setMax(position.sum(size.product(.5)));
+    }
+
+    public void moveTo(Vector2 position) {
+        if (!position.equals(this.position)) {
+            this.position = position;
+            this.changed = true;
+            updateBounds();
+        }
+    }
+
+    public void resize(Vector2 size) {
+        if (!size.equals(this.size)) {
+            this.size = size;
+            this.changed = true;
+            updateBounds();
+        }
+    }
+
+    public Vector2 getPosition() {
+        return this.position;
+    }
+
+    public Vector2 getSize() {
+        return this.size;
+    }
+
+    public boolean consumeChangedFlag() {
+        boolean flag = this.changed;
+        this.changed = false;
+        return flag;
     }
 
     public void triggerCollisionEvent(ShapeCollision collision) {

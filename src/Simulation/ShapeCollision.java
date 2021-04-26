@@ -10,12 +10,10 @@
 
 package Simulation;
 
+import Structures.Vector2;
+
 public class ShapeCollision extends SimulationEvent {
     public static ShapeCollision collide(SimulatedShape shape0, SimulatedShape shape1) {
-        if (shape0.isAnchored() && shape1.isAnchored()) {
-            return new ShapeCollision(false, Vector2.ZERO, shape0, shape1);
-        }
-
         // COLLIDE SHAPES
 
         return new ShapeCollision(true, Vector2.ZERO, shape0, shape1);

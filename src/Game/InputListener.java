@@ -9,7 +9,7 @@
 
 package Game;
 
-import Simulation.Vector2;
+import Structures.Vector2;
 
 import java.util.HashMap;
 
