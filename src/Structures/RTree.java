@@ -325,7 +325,7 @@ public class RTree <DataObject extends BoundedObject> {
             this.remove(parent);
 
             // Reinsert orphaned children
-            for (RTreeNode child : node.getChildren()) {
+            for (RTreeNode child : parent.getChildren()) {
                 this.insert(this.root, child, false);
             }
         }
