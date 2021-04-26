@@ -24,12 +24,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class RTree <BoundedObject extends BoundingBox> {
+public class RTree <DataObject extends BoundedObject> {
     private static final int DEFAULT_BRANCH_MAX = 3;
     private static final int DEFAULT_LEAF_MAX = 4;
 
     private RTreeNode root;
-    private int branchMax, leafMax, height;
+    private int branchMax, leafMax;
 
     public RTree() {
         this(DEFAULT_BRANCH_MAX, DEFAULT_LEAF_MAX);
@@ -39,17 +39,17 @@ public class RTree <BoundedObject extends BoundingBox> {
         this.branchMax = Math.max(3, branchMax);
         this.leafMax = Math.max(3, leafMax);
 
-        this.root = new RTreeNode<BoundedObject>(true);
-        this.height = 1;
+        this.root = new RTreeNode<DataObject>();
     }
 
-    private static RTreeNode getMinArea(RTreeNode[] children, BoundingBox shape) {
+    private static RTreeNode getMinArea(RTreeNode[] children) {
         double minArea = Double.MAX_VALUE;
         RTreeNode bestBranch = null;
 
         for (RTreeNode currentBranch : children) {
             // Get area
-            double area = currentBranch.area();
+            BoundingBox branchBounds = currentBranch.getBounds();
+            double area = branchBounds.area();
 
             // Set minimum
             if (bestBranch == null || area < minArea) {
@@ -66,13 +66,14 @@ public class RTree <BoundedObject extends BoundingBox> {
         return bestBranch;
     }
 
-    private static RTreeNode getMinAreaChange(RTreeNode[] children, BoundingBox shape) {
+    private static RTreeNode getMinAreaChange(RTreeNode[] children, BoundingBox bounds) {
         double minAreaChange = Double.MAX_VALUE;
         RTreeNode bestBranch = null;
 
         for (RTreeNode currentBranch : children) {
             // Get area change
-            double areaChange = currentBranch.area() - currentBranch.expand(shape).area();
+            BoundingBox branchBounds = currentBranch.getBounds();
+            double areaChange = branchBounds.area() - branchBounds.expand(bounds).area();
 
             // Set minimum
             if (bestBranch == null || areaChange < minAreaChange) {
@@ -83,31 +84,35 @@ public class RTree <BoundedObject extends BoundingBox> {
             // Resolve ties with smaller initial area
             else {
                 RTreeNode[] compareGroup = {bestBranch, currentBranch};
-                bestBranch = getMinArea(compareGroup, shape);
+                bestBranch = getMinArea(compareGroup);
             }
         }
 
         return bestBranch;
     }
 
-    private static RTreeNode getMinOverlapChange(RTreeNode[] children, BoundingBox shape) {
+    private static RTreeNode getMinOverlapChange(RTreeNode[] children, BoundingBox bounds) {
         double minOverlapChange = Double.MAX_VALUE;
         RTreeNode bestBranch = null;
 
         for (RTreeNode currentBranch : children) {
+            BoundingBox branchBounds = currentBranch.getBounds();
+
             // Get overlap area
             double oldOverlapArea = 0;
             for (RTreeNode overlappingRegion : children) {
-                if (overlappingRegion != currentBranch) {
-                    oldOverlapArea += Math.max(0, currentBranch.getOverlapRegion(overlappingRegion).area());
+                BoundingBox overlappingBounds = overlappingRegion.getBounds();
+                if (overlappingBounds != branchBounds) {
+                    oldOverlapArea += Math.max(0, branchBounds.getOverlapRegion(overlappingBounds).area());
                 }
             }
 
-            BoundingBox proposedRegion = currentBranch.expand(currentBranch);
+            BoundingBox proposedRegion = branchBounds.expand(bounds);
             double newOverlapArea = 0;
             for (RTreeNode overlappingRegion : children) {
-                if (overlappingRegion != currentBranch) {
-                    newOverlapArea += Math.max(0, proposedRegion.getOverlapRegion(overlappingRegion).area());
+                BoundingBox overlappingBounds = overlappingRegion.getBounds();
+                if (overlappingBounds != branchBounds) {
+                    oldOverlapArea += Math.max(0, proposedRegion.getOverlapRegion(overlappingBounds).area());
                 }
             }
 
@@ -122,7 +127,7 @@ public class RTree <BoundedObject extends BoundingBox> {
             // Resolve ties with smaller area change
             else if (overlapChange == minOverlapChange) {
                 RTreeNode[] compareGroup = {bestBranch, currentBranch};
-                bestBranch = getMinAreaChange(compareGroup, shape);
+                bestBranch = getMinAreaChange(compareGroup, bounds);
             }
         }
 
@@ -135,35 +140,35 @@ public class RTree <BoundedObject extends BoundingBox> {
         assert (childCount >= 4);
 
         // Create axis comparators
-        ArrayList<Comparator<BoundingBox>> axisComparators = new ArrayList<>();
-        axisComparators.add(Comparator.comparingDouble(box -> box.min.x));
-        axisComparators.add(Comparator.comparingDouble(box -> box.max.x));
-        axisComparators.add(Comparator.comparingDouble(box -> box.min.y));
-        axisComparators.add(Comparator.comparingDouble(box -> box.max.y));
+        ArrayList<Comparator<RTreeNode>> axisComparators = new ArrayList<>();
+        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().min.x));
+        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().max.x));
+        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().min.y));
+        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().max.y));
 
         // Get split axis with minimum margin
         double minMargin = Double.MAX_VALUE;
-        BoundingBox[] bestSplitAxis = null;
+        RTreeNode[] bestSplitAxis = null;
 
-        for (Comparator<BoundingBox> axisComparator : axisComparators) {
+        for (Comparator<RTreeNode> axisComparator : axisComparators) {
             // Create split axis
-            BoundingBox[] splitAxis = node.getChildren();
+            RTreeNode[] splitAxis = node.getChildren();
             Arrays.sort(splitAxis, axisComparator);
 
             // Get split axis margin
             double splitMargin = 0;
             for (int splitIndex = 2;  splitIndex <= childCount - 2; splitIndex++) {
                 // Add first region margin
-                BoundingBox splitRegion0 = splitAxis[0];
+                BoundingBox splitRegion0 = splitAxis[0].getBounds();
                 for (int regionIndex = 1; regionIndex < splitIndex; regionIndex++) {
-                    splitRegion0 = splitRegion0.expand(splitAxis[regionIndex]);
+                    splitRegion0 = splitRegion0.expand(splitAxis[regionIndex].getBounds());
                 }
                 splitMargin += splitRegion0.perimeter();
 
                 // Add second region margin
-                BoundingBox splitRegion1 = splitAxis[0];
+                BoundingBox splitRegion1 = splitAxis[0].getBounds();
                 for (int regionIndex = splitIndex + 1; regionIndex < childCount; regionIndex++) {
-                    splitRegion1 = splitRegion1.expand(splitAxis[regionIndex]);
+                    splitRegion1 = splitRegion1.expand(splitAxis[regionIndex].getBounds());
                 }
                 splitMargin += splitRegion1.perimeter();
             }
@@ -182,15 +187,15 @@ public class RTree <BoundedObject extends BoundingBox> {
 
         for (int splitIndex = 2;  splitIndex <= childCount - 2; splitIndex++) {
             // Get first region
-            BoundingBox splitRegion0 = bestSplitAxis[0];
+            BoundingBox splitRegion0 = bestSplitAxis[0].getBounds();
             for (int regionIndex = 1; regionIndex < splitIndex; regionIndex++) {
-                splitRegion0 = splitRegion0.expand(bestSplitAxis[regionIndex]);
+                splitRegion0 = splitRegion0.expand(bestSplitAxis[regionIndex].getBounds());
             }
 
             // Get second region
-            BoundingBox splitRegion1 = bestSplitAxis[0];
+            BoundingBox splitRegion1 = bestSplitAxis[0].getBounds();
             for (int regionIndex = splitIndex + 1; regionIndex < childCount; regionIndex++) {
-                splitRegion1 = splitRegion1.expand(bestSplitAxis[regionIndex]);
+                splitRegion1 = splitRegion1.expand(bestSplitAxis[regionIndex].getBounds());
             }
 
             // Get overlap
@@ -206,20 +211,18 @@ public class RTree <BoundedObject extends BoundingBox> {
         }
 
         if (reinsert) {
-            ArrayList<BoundingBox> reinsertList = new ArrayList<>();
+            ArrayList<RTreeNode> reinsertList = new ArrayList<>();
             for (int splitIndex = bestSplitIndex; splitIndex < childCount; splitIndex++) {
                 node.remove(bestSplitAxis[splitIndex]);
                 reinsertList.add(bestSplitAxis[splitIndex]);
             }
-            for (BoundingBox reinsertElement : reinsertList) {
-                this.insert(this.root, reinsertElement, this.height, 1, false);
+            for (RTreeNode reinsertElement : reinsertList) {
+                this.insert(this.root, reinsertElement, false);
             }
         }
 
         // Split node
         else {
-            // Get Parent
-            RTreeNode parent = node.getParent();
             if (parent == null) {
                 parent = new RTreeNode(false);
                 node.setParent(parent);
@@ -230,7 +233,7 @@ public class RTree <BoundedObject extends BoundingBox> {
                 }
             }
 
-            RTreeNode splitNode = new RTreeNode(parent, node.isLeaf);
+            RTreeNode splitNode = new RTreeNode();
 
             for (int splitIndex = bestSplitIndex; splitIndex < childCount; splitIndex++) {
                 node.remove(bestSplitAxis[splitIndex]);
@@ -244,118 +247,61 @@ public class RTree <BoundedObject extends BoundingBox> {
         }
     }
 
-    private void insert(RTreeNode node, BoundingBox shape, int targetLevel, int currentLevel, boolean reinsert) {
-        // Insert if leaf
-        if (currentLevel == targetLevel) {
-            // Insert shape into leaf node
-            node.insert(shape);
+    private boolean insert(RTreeNode ancestor, RTreeNode node, boolean reinsert) {
+        int ancestorHeight = ancestor.height();
+        int nodeHeight = node.height();
 
-            // Split node if overflow
-            int nodeMax = this.branchMax;
-            if (node.isLeaf) {
-                nodeMax = this.leafMax;
-            }
-            if (node.size() > nodeMax) {
-                splitNode(node, reinsert);
-            }
-        }
-
-        // Find best branch
-        else {
-            RTreeNode[] children = Arrays.copyOf(node.getChildren(), node.size(), RTreeNode[].class);
-
-            // Chose minimum overlap
-            if (children[0].isLeaf) {
-                this.insert(getMinOverlapChange(children, shape), shape, targetLevel, currentLevel + 1, reinsert);
-            }
-
-            // Chose minimum area
-            else {
-                for (RTreeNode child : children) {
-                    this.insert(getMinAreaChange(children, shape), shape, targetLevel, currentLevel + 1, reinsert);
+        // Insert node at appropriate level
+        if (ancestorHeight == 0 || ancestorHeight == nodeHeight + 1) {
+            if (ancestor.insert(node)) {
+                // Split node if overflow
+                int maxChildren = this.branchMax;
+                if (ancestorHeight == 1) {
+                    maxChildren = this.leafMax;
                 }
-            }
-        }
-    }
-
-    public void insert(BoundedObject shape) {
-        insert(this.root, shape, this.height, 1, true);
-    }
-
-    private boolean remove(RTreeNode node, BoundingBox shape, int currentLevel, int bottomOffset) {
-        if (currentLevel == this.height - bottomOffset) {
-            if (node.remove(shape)) {
-                int nodeMax = this.branchMax;
-                int nodeSize = node.size();
-                if (node.isLeaf) {
-                    nodeMax = this.leafMax;
+                if (ancestor.size() > maxChildren) {
+                    splitNode(ancestor, reinsert);
                 }
-                /*
-                if (nodeSize < nodeMax / 2) {
-                    RTreeNode parent = node.getParent();
-                    if (node != this.root) {
-                        remove(parent, node, currentLevel - 1, bottomOffset + 1);
-                        for (BoundingBox child : node.getChildren()) {
-                            this.insert(this.root, child, this.height - bottomOffset, 1, false);
-                        }
-                    }
-                    else if (nodeSize == 1 && !node.isLeaf) {
-                        this.root = (RTreeNode) node.getChildren()[0];
-                        this.root.setParent(null);
-                        this.height -= 1;
-                    }
 
-                }
                 return true;
+            }
+            return false;
+        }
 
-                 */
+        // Select best branch to insert node
+        else {
+            RTreeNode[] children = ancestor.getChildren();
+            BoundingBox bounds = node.getBounds();
+
+            // Chose minimum overlap for branches pointing directly to leaf nodes
+            if (ancestorHeight == 1) {
+                return this.insert(getMinOverlapChange(children, bounds), node, reinsert);
+            }
+
+            // Chose minimum area for the rest of the branches
+            else {
+                return this.insert(getMinAreaChange(children, bounds), node, reinsert);
             }
         }
-        else if (node.encloses(shape)) {
-            currentLevel += 1;
-            for (BoundingBox child : node.getChildren()) {
-                if (remove((RTreeNode) child, shape, currentLevel, bottomOffset)) {
-                    return true;
-                }
-            }
+    }
+
+    public boolean insert(DataObject entry) {
+        if (!this.contains(entry)) {
+            this.insert(this.root, new RTreeNode(entry), true);
+            return true;
         }
         return false;
     }
 
-    public void remove(BoundingBox shape) {
-        this.remove(this.root, shape, 1, 0);
+    public boolean remove(DataObject entry) {
+        return true;
     }
 
-    private ArrayList<BoundedObject> getOverlapping(BoundingBox region, RTreeNode node) {
-        ArrayList<BoundedObject> overlappingShapes = new ArrayList<>();
-        if (node.isLeaf) {
-            for (BoundingBox child : node.getChildren()) {
-                if (region.overlaps(child)) {
-                    overlappingShapes.add((BoundedObject) child);
-                }
-            }
-        }
-        else if (region.encloses(node)) {
-            overlappingShapes = ((RTreeNode) node).getLeafChildren();
-        }
-        else if (region.overlaps(node)) {
-            for (RTreeNode child : Arrays.copyOf(node.getChildren(), node.size(), RTreeNode[].class)) {
-                overlappingShapes.addAll(getOverlapping(region, child));
-            }
-        }
-
-        return overlappingShapes;
+    public boolean contains(DataObject entry) {
+        return true;
     }
 
-    public ArrayList<BoundedObject> getOverlapping(BoundingBox region) {
-        return this.getOverlapping(region, this.root);
-    }
-
-    public boolean isEmpty() {
-        return this.root.isEmpty();
-    }
-
-    public ArrayList<BoundedObject> getLeafChildren() {
-        return this.root.getLeafChildren();
+    public ArrayList<DataObject> getObjectsInRegion(BoundingBox region) {
+        return new ArrayList<>();
     }
 }

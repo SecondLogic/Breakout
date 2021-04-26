@@ -11,108 +11,70 @@ package Structures;
 
 import java.util.ArrayList;
 
-public class RTreeNode <BoundedObject extends BoundingBox> extends BoundingBox {
-    private RTreeNode parent;
-    private ArrayList<BoundingBox> children;
-    private BoundedObject shape;
-    public final boolean isLeaf;
+public class RTreeNode <DataObject extends BoundedObject> implements BoundedObject {
+    private BoundingBox bounds;
+    private ArrayList<RTreeNode> children;
+    public final DataObject data;
 
-    public RTreeNode(boolean isLeaf) {
-        this(null, isLeaf);
+    public RTreeNode() {
+        this.children = new ArrayList<RTreeNode>();
+        this.data = null;
+        this.bounds = new BoundingBox();
     }
 
-    public RTreeNode(RTreeNode parent, boolean isLeaf) {
-        this.parent = parent;
-        this.isLeaf = isLeaf;
-        this.children = new ArrayList<BoundingBox>();
+    public RTreeNode(DataObject data) {
+        this.children = new ArrayList<RTreeNode>();
+        this.data = data;
+        this.bounds = data.getBounds();
+    }
 
-        if (!(parent == null)) {
-            parent.insert(this);
+    private void updateBounds() {
+        if (this.children.isEmpty()) {
+            this.bounds = new BoundingBox();
+        }
+        else {
+            BoundingBox newBounds = this.children.get(0).getBounds();
+            for (RTreeNode child : children) {
+                newBounds = newBounds.expand(child.getBounds());
+            }
+            this.bounds = newBounds;
         }
     }
 
-    public RTreeNode getParent() {
-        return this.parent;
-    }
-
-    public void setParent(RTreeNode parent) {
-        this.parent = parent;
-    }
-
-    public void updateBounds() {
-        if (this.children.size() == 0) {
-            this.min = Vector2.ZERO;
-            this.max = Vector2.ZERO;
-            return;
-        }
-
-        double minX = children.get(0).getMin().x;
-        double minY = children.get(0).getMin().y;
-        double maxX = children.get(0).getMax().x;
-        double maxY = children.get(0).getMax().y;
-
-        for (BoundingBox child : children) {
-            minX = Math.min(child.getMin().x, minX);
-            minY = Math.min(child.getMin().y, minY);
-            maxX = Math.max(child.getMax().x, maxX);
-            maxY = Math.max(child.getMax().y, maxY);
-        }
-
-        this.min = new Vector2(minX, minY);
-        this.max = new Vector2(maxX, maxY);
-
-        if (!(this.parent == null)) {
-            this.parent.updateBounds();
-        }
-    }
-
-    public boolean insert(BoundingBox entry) {
-        boolean inserted = false;
-        if (!this.children.contains(entry)) {
+    public boolean insert(RTreeNode entry) {
+        if (this.data == null && !children.contains(entry)) {
             this.children.add(entry);
             this.updateBounds();
-            if (entry instanceof RTreeNode) {
-                ((RTreeNode) entry).setParent(this);
-            }
-            inserted = true;
+            return true;
         }
-        return inserted;
+        return false;
     }
 
-    public boolean remove(BoundingBox entry) {
-        boolean removed = false;
-        if (this.children.remove(entry)) {
+    public boolean remove(RTreeNode entry) {
+        if (this.data == null && children.contains(entry)) {
+            this.children.remove(entry);
             this.updateBounds();
-            if (entry instanceof RTreeNode) {
-                ((RTreeNode) entry).setParent(null);
-            }
-            removed = true;
+            return true;
         }
-        return removed;
-    }
-
-    public boolean isEmpty() {
-        return this.children.isEmpty();
-    }
-
-    public ArrayList<BoundedObject> getLeafChildren() {
-        ArrayList<BoundedObject> shapes = new ArrayList<>();
-        for (BoundingBox child : children) {
-            if (child instanceof RTreeNode) {
-                shapes.addAll(((RTreeNode) child).getLeafChildren());
-            }
-            else {
-                shapes.add((BoundedObject) child);
-            }
-        }
-        return shapes;
-    }
-
-    public BoundingBox[] getChildren() {
-        return this.children.toArray(new BoundingBox[this.size()]);
+        return false;
     }
 
     public int size() {
         return this.children.size();
+    }
+
+    public int height() {
+        if (!this.children.isEmpty()) {
+            return 1 + this.children.get(0).height();
+        }
+        return 0;
+    }
+
+    public RTreeNode[] getChildren() {
+        return this.children.toArray(new RTreeNode[this.size()]);
+    }
+
+    public BoundingBox getBounds() {
+        return this.bounds;
     }
 }

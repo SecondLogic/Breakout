@@ -10,11 +10,13 @@
 package Simulation;
 
 import Structures.BoundingBox;
+import Structures.BoundedObject;
 import Structures.Vector2;
 import javafx.scene.shape.Shape;
 
-public class SimulatedShape extends BoundingBox {
+public class SimulatedShape implements BoundedObject {
     protected Vector2 size, position, velocity;
+    private BoundingBox bounds;
     private boolean changed;
     private boolean anchored;
     private double mass;
@@ -31,7 +33,7 @@ public class SimulatedShape extends BoundingBox {
     }
 
     public SimulatedShape(Vector2 size, Vector2 position) {
-        super(position.sum(size.product(-.5)), position.sum(size.product(.5)));
+        this.bounds = new BoundingBox(position.sum(size.product(-.5)), position.sum(size.product(.5)));
         this.size = size;
         this.position = position;
         this.velocity = Vector2.ZERO;
@@ -59,8 +61,7 @@ public class SimulatedShape extends BoundingBox {
     }
 
     private void updateBounds() {
-        this.setMin(position.sum(size.product(-.5)));
-        this.setMax(position.sum(size.product(.5)));
+        this.bounds = new BoundingBox(position.sum(size.product(-.5)), position.sum(size.product(.5)));
     }
 
     public void moveTo(Vector2 position) {
@@ -86,6 +87,8 @@ public class SimulatedShape extends BoundingBox {
     public Vector2 getSize() {
         return this.size;
     }
+
+    public BoundingBox getBounds() { return this.bounds; }
 
     public boolean consumeChangedFlag() {
         boolean flag = this.changed;

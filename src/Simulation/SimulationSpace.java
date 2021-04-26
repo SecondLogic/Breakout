@@ -32,21 +32,24 @@ public class SimulationSpace {
     }
 
     public void add(SimulatedShape shape) {
-        this.shapes.insert(shape);
+        //this.shapes.insert(shape);
         this.uiChildren.add(shape.getNode());
     }
 
     public void remove(SimulatedShape shape) {
-        this.shapes.remove(shape);
+        //this.shapes.remove(shape);
         this.uiChildren.remove(shape.getNode());
     }
 
     public void setScene(Scene scene) {
         ObservableList<Node> sceneChildren = ((Pane) scene.getRoot()).getChildren();
+        /*
         for (SimulatedShape shape : this.shapes.getLeafChildren()) {
+
             this.uiChildren.remove(shape.getNode());
             sceneChildren.add(shape.getNode());
         }
+        */
         this.uiChildren = sceneChildren;
     }
 
@@ -66,6 +69,7 @@ public class SimulationSpace {
         this.simulating = true;
         long currentTick = System.currentTimeMillis();
 
+        /*
         // Terminate if space contains no children
         if (this.shapes.isEmpty()) {
             this.lastSimulationTick = currentTick;
@@ -108,6 +112,7 @@ public class SimulationSpace {
                 }
             }
         }
+        */
 
         this.lastSimulationTick = currentTick;
         this.simulating = false;

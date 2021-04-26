@@ -7,10 +7,11 @@
     Simulation/BoundingBox.java
  */
 
+
 package Structures;
 
 public class BoundingBox {
-    protected Vector2 min, max;
+    public final Vector2 min, max;
 
     public BoundingBox() {
         this.min = Vector2.ZERO;
@@ -22,34 +23,27 @@ public class BoundingBox {
         this.max = max;
     }
 
-    public void setMin(Vector2 min) {
-        this.min = min;
-    }
-
-    public void setMax(Vector2 max) {
-        this.max = max;
-    }
-
-    public Vector2 getMin() {
-        return this.min;
-    }
-
-    public Vector2 getMax() {
-        return this.max;
-    }
-
     public boolean encloses(Vector2 v) {
-        return v.x >= this.min.x && v.y >= this.min.y && v.x <= this.max.x && v.y <= this.max.y;
+        return v.x >= this.min.x
+                && v.y >= this.min.y
+                && v.x <= this.max.x
+                && v.y <= this.max.y;
     }
 
     public boolean overlaps(BoundingBox o) {
-        return this.encloses(o.min) || this.encloses(o.max) || this.encloses(new Vector2(o.min.x, o.max.y))
-                || this.encloses(new Vector2(o.max.x, o.min.y)) || o.encloses(this.min) || o.encloses(this.max)
-                || o.encloses(new Vector2(this.min.x, this.max.y)) || o.encloses(new Vector2(this.max.x, this.min.y));
+        return this.encloses(o.min)
+                || this.encloses(o.max)
+                || this.encloses(new Vector2(o.min.x, o.max.y))
+                || this.encloses(new Vector2(o.max.x, o.min.y))
+                || o.encloses(this.min)
+                || o.encloses(this.max)
+                || o.encloses(new Vector2(this.min.x, this.max.y))
+                || o.encloses(new Vector2(this.max.x, this.min.y));
     }
 
     public boolean encloses(BoundingBox o) {
-        return this.encloses(o.min) && this.encloses(o.max);
+        return this.encloses(o.min)
+                && this.encloses(o.max);
     }
 
     public double area() {
@@ -67,17 +61,13 @@ public class BoundingBox {
     }
 
     public BoundingBox expand(BoundingBox region) {
-        return this.expand(region.getMax()).expand(region.getMax());
+        return this.expand(region.min).expand(region.max);
     }
 
     public BoundingBox getOverlapRegion(BoundingBox region) {
-        Vector2 oMin = new Vector2(Math.max(this.min.x, region.getMin().x), Math.max(this.min.y, region.getMin().y));
-        Vector2 oMax = new Vector2(Math.min(this.max.x, region.getMax().x), Math.min(this.max.y, region.getMax().y));
+        Vector2 oMin = new Vector2(Math.max(this.min.x, region.min.x), Math.max(this.min.y, region.min.y));
+        Vector2 oMax = new Vector2(Math.min(this.max.x, region.max.x), Math.min(this.max.y, region.max.y));
         return new BoundingBox(oMin, oMax);
     }
 
-    @Override
-    public String toString() {
-        return "[" + this.min + ", " + this.max + "]";
-    }
 }
