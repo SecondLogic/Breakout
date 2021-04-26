@@ -20,36 +20,37 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 
 public class SimulationSpace {
-    private RTree<SimulatedShape> shapes;
+    private ArrayList<SimulatedShape> shapes;
+    private RTree<SimulatedShape> shapeRegions;
     private ObservableList<Node> uiChildren;
     private long lastSimulationTick;
     private boolean simulating;
 
     public SimulationSpace(Scene scene) {
-        this.shapes = new RTree<SimulatedShape>();
+        this.shapes = new ArrayList<>();
+        this.shapeRegions = new RTree<>();
         this.uiChildren = ((Pane) scene.getRoot()).getChildren();
         this.resetTick();
     }
 
     public void add(SimulatedShape shape) {
-        //this.shapes.insert(shape);
+        this.shapes.add(shape);
+        this.shapeRegions.insert(shape);
         this.uiChildren.add(shape.getNode());
     }
 
     public void remove(SimulatedShape shape) {
-        //this.shapes.remove(shape);
+        this.shapes.remove(shape);
+        this.shapeRegions.remove(shape);
         this.uiChildren.remove(shape.getNode());
     }
 
     public void setScene(Scene scene) {
         ObservableList<Node> sceneChildren = ((Pane) scene.getRoot()).getChildren();
-        /*
-        for (SimulatedShape shape : this.shapes.getLeafChildren()) {
-
+        for (SimulatedShape shape : this.shapes) {
             this.uiChildren.remove(shape.getNode());
             sceneChildren.add(shape.getNode());
         }
-        */
         this.uiChildren = sceneChildren;
     }
 
@@ -69,30 +70,26 @@ public class SimulationSpace {
         this.simulating = true;
         long currentTick = System.currentTimeMillis();
 
-        /*
-        // Terminate if space contains no children
-        if (this.shapes.isEmpty()) {
-            this.lastSimulationTick = currentTick;
-            return;
-        }
-
         // Check unanchored shapes for collision
         ArrayList<SimulatedShape> checkedShapes = new ArrayList<>();
-        for (SimulatedShape shape : this.shapes.getLeafChildren()) {
+        for (SimulatedShape shape : this.shapes) {
             shape.getNode().setFill(Color.WHITE);
         }
 
-        for (SimulatedShape shape : this.shapes.getLeafChildren()) {
-            shape.moveTo(shape.getPosition().sum(Math.sin(currentTick / 100.0),0));
+        for (SimulatedShape shape : this.shapes) {
+            //shape.moveTo(shape.getPosition().sum(Math.sin(currentTick / 100.0),0));
 
+            /*
             if (shape.consumeChangedFlag()) {
+
                 this.shapes.remove(shape);
                 this.shapes.insert(shape);
             }
+             */
 
             if (!shape.isAnchored()) {
                 // Get rough collision
-                ArrayList<SimulatedShape> overlaps = this.shapes.getOverlapping(shape);
+                ArrayList<SimulatedShape> overlaps = this.shapeRegions.getObjectsInRegion(shape.getBounds());
 
                 // Remove redundant checks
                 checkedShapes.add(shape);
@@ -112,7 +109,6 @@ public class SimulationSpace {
                 }
             }
         }
-        */
 
         this.lastSimulationTick = currentTick;
         this.simulating = false;

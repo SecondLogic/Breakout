@@ -223,17 +223,16 @@ public class RTree <DataObject extends BoundedObject> {
 
         // Split node
         else {
-            if (parent == null) {
-                parent = new RTreeNode(false);
-                node.setParent(parent);
+            // Get Parent
+            RTreeNode parent = node.getParent();
+            if (node == this.root) {
+                parent = new RTreeNode<DataObject>();
                 parent.insert(node);
-                if (node == this.root) {
-                    this.root = parent;
-                    this.height += 1;
-                }
+                this.root = parent;
             }
 
-            RTreeNode splitNode = new RTreeNode();
+            RTreeNode<DataObject> splitNode = new RTreeNode();
+            parent.insert(splitNode);
 
             for (int splitIndex = bestSplitIndex; splitIndex < childCount; splitIndex++) {
                 node.remove(bestSplitAxis[splitIndex]);
@@ -297,11 +296,57 @@ public class RTree <DataObject extends BoundedObject> {
         return true;
     }
 
+    private boolean contains(DataObject entry, RTreeNode node) {
+        if (node.data == entry) {
+            return true;
+        }
+        if (node.getBounds().encloses(entry.getBounds())) {
+            for (RTreeNode child : node.getChildren()) {
+                if (contains(entry, child)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public boolean contains(DataObject entry) {
-        return true;
+        return contains(entry, this.root);
+    }
+
+    public ArrayList<DataObject> getObjectsInBranch(RTreeNode<DataObject> node) {
+        ArrayList<DataObject> objects = new ArrayList<>();
+        if (node.data != null) {
+            objects.add(node.data);
+        }
+        else {
+            for (RTreeNode child : node.getChildren()) {
+                objects.addAll(getObjectsInBranch(child));
+            }
+        }
+        return objects;
+    }
+
+    public ArrayList<DataObject> getObjectsInRegion(BoundingBox region, RTreeNode<DataObject> node) {
+        ArrayList<DataObject> overlappingObjects = new ArrayList<>();
+        if (region.encloses(node.getBounds())) {
+            overlappingObjects = getObjectsInBranch(node);
+        }
+        else if (region.overlaps(node.getBounds())) {
+            if (node.height() == 0) {
+                overlappingObjects.add(node.data);
+            }
+            else {
+                for (RTreeNode child : node.getChildren()) {
+                    overlappingObjects.addAll(getObjectsInRegion(region, child));
+                }
+            }
+        }
+
+        return overlappingObjects;
     }
 
     public ArrayList<DataObject> getObjectsInRegion(BoundingBox region) {
-        return new ArrayList<>();
+        return this.getObjectsInRegion(region, this.root);
     }
 }

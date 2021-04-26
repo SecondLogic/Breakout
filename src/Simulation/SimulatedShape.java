@@ -26,6 +26,7 @@ public class SimulatedShape implements BoundedObject {
         this.size = Vector2.ZERO;
         this.position = Vector2.ZERO;
         this.velocity = Vector2.ZERO;
+        this.bounds = new BoundingBox();
         this.changed = false;
         this.anchored = true;
         this.mass = 1;
@@ -33,10 +34,10 @@ public class SimulatedShape implements BoundedObject {
     }
 
     public SimulatedShape(Vector2 size, Vector2 position) {
-        this.bounds = new BoundingBox(position.sum(size.product(-.5)), position.sum(size.product(.5)));
         this.size = size;
         this.position = position;
         this.velocity = Vector2.ZERO;
+        this.bounds = new BoundingBox(position.sum(size.product(-.5)), position.sum(size.product(.5)));
         this.anchored = true;
         this.mass = 1;
         this.onCollide = null;
