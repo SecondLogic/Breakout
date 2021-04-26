@@ -54,22 +54,14 @@ public class Main extends Application {
         Vector2 paddlePos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y / 2);
         SimulatedRectangle paddle = new SimulatedRectangle(paddleSize, paddlePos, simulationSpace);
 
-        /*
         // Ball
         Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 8);
         SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
         ball.setAnchored(false);
-        */
-
-        // Ball
-        Vector2 ballSize = new Vector2(200, 200);
-        Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 8);
-        SimulatedRectangle ball = new SimulatedRectangle(ballSize, ballPos, simulationSpace);
-        ball.setAnchored(false);
 
         // Bricks
-        for (int x = 0; x < 10; x++) {
-            for (int y = 0; y < 1; y++) {
+        for (int x = 0; x < 20; x++) {
+            for (int y = 0; y < 5; y++) {
                 Vector2 brickSize = new Vector2(50,20);
                 Vector2 brickPos = new Vector2(30 + 55 * x, 15 + 25 * y);
                 //Vector2 brickPos = new Vector2(Math.random() * scene.getWidth(),Math.random() * scene.getHeight());
@@ -84,14 +76,17 @@ public class Main extends Application {
                 while (!this.isCancelled()) {
                     // Run simulation if not paused
                     if (!isPaused) {
-                        // Move Paddle
-                        Vector2 mouseLocation = inputListener.getMouseLocation();
-                        paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
+                        if (!simulationSpace.isSimulating()) {
 
-                        ball.moveTo(mouseLocation);
+                            // Move Paddle
+                            Vector2 mouseLocation = inputListener.getMouseLocation();
+                            paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
 
-                        // Run simulation
-                        simulationSpace.simulate();
+                            ball.moveTo(mouseLocation);
+
+                            // Run simulation
+                            simulationSpace.simulate();
+                        }
                     }
                     Thread.sleep(16);  // ~60hz
                 }

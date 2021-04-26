@@ -25,8 +25,17 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 public class RTree <DataObject extends BoundedObject> {
+    // Default node capacity values
     private static final int DEFAULT_BRANCH_MAX = 3;
     private static final int DEFAULT_LEAF_MAX = 4;
+
+    // Split axis comparators
+    private static final Comparator[] AXIS_COMPARATORS = {
+        Comparator.comparingDouble((RTreeNode bounds) -> bounds.getBounds().min.x),
+        Comparator.comparingDouble((RTreeNode bounds) -> bounds.getBounds().max.x),
+        Comparator.comparingDouble((RTreeNode bounds) -> bounds.getBounds().min.y),
+        Comparator.comparingDouble((RTreeNode bounds) -> bounds.getBounds().max.y)
+    };
 
     private RTreeNode root;
     private int branchMax, leafMax;
@@ -98,7 +107,7 @@ public class RTree <DataObject extends BoundedObject> {
         for (RTreeNode currentBranch : children) {
             BoundingBox branchBounds = currentBranch.getBounds();
 
-            // Get overlap area
+            // Get change in overlap area
             double oldOverlapArea = 0;
             for (RTreeNode overlappingRegion : children) {
                 BoundingBox overlappingBounds = overlappingRegion.getBounds();
@@ -134,30 +143,19 @@ public class RTree <DataObject extends BoundedObject> {
         return bestBranch;
     }
 
-    private void splitNode(RTreeNode node, boolean reinsert) {
-        // Cannot split if node has less than 4 children (branch must have at least 2 children)
-        double childCount = node.size();
-        assert (childCount >= 4);
-
-        // Create axis comparators
-        ArrayList<Comparator<RTreeNode>> axisComparators = new ArrayList<>();
-        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().min.x));
-        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().max.x));
-        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().min.y));
-        axisComparators.add(Comparator.comparingDouble(box -> box.getBounds().max.y));
-
-        // Get split axis with minimum margin
+    private static RTreeNode[] getBestSplitAxis(RTreeNode node) {
+        // Find split axis with smallest total margin (sum of perimeters)
         double minMargin = Double.MAX_VALUE;
         RTreeNode[] bestSplitAxis = null;
 
-        for (Comparator<RTreeNode> axisComparator : axisComparators) {
+        for (Comparator<RTreeNode> axisComparator : AXIS_COMPARATORS) {
             // Create split axis
             RTreeNode[] splitAxis = node.getChildren();
             Arrays.sort(splitAxis, axisComparator);
 
             // Get split axis margin
             double splitMargin = 0;
-            for (int splitIndex = 2;  splitIndex <= childCount - 2; splitIndex++) {
+            for (int splitIndex = 2;  splitIndex <= splitAxis.length - 2; splitIndex++) {
                 // Add first region margin
                 BoundingBox splitRegion0 = splitAxis[0].getBounds();
                 for (int regionIndex = 1; regionIndex < splitIndex; regionIndex++) {
@@ -167,7 +165,7 @@ public class RTree <DataObject extends BoundedObject> {
 
                 // Add second region margin
                 BoundingBox splitRegion1 = splitAxis[0].getBounds();
-                for (int regionIndex = splitIndex + 1; regionIndex < childCount; regionIndex++) {
+                for (int regionIndex = splitIndex + 1; regionIndex < splitAxis.length; regionIndex++) {
                     splitRegion1 = splitRegion1.expand(splitAxis[regionIndex].getBounds());
                 }
                 splitMargin += splitRegion1.perimeter();
@@ -180,22 +178,26 @@ public class RTree <DataObject extends BoundedObject> {
             }
         }
 
-        // Chose split index with minimum overlap
+        return bestSplitAxis;
+    }
+
+    private int getBestSplitIndex(RTreeNode[] splitAxis) {
+        // Find best split index based on minimum overlap between split regions
         double minOverlap = Double.MAX_VALUE;
         double bestSplitArea = Double.MAX_VALUE;
         int bestSplitIndex = 0;
 
-        for (int splitIndex = 2;  splitIndex <= childCount - 2; splitIndex++) {
+        for (int splitIndex = 2;  splitIndex <= splitAxis.length - 2; splitIndex++) {
             // Get first region
-            BoundingBox splitRegion0 = bestSplitAxis[0].getBounds();
+            BoundingBox splitRegion0 = splitAxis[0].getBounds();
             for (int regionIndex = 1; regionIndex < splitIndex; regionIndex++) {
-                splitRegion0 = splitRegion0.expand(bestSplitAxis[regionIndex].getBounds());
+                splitRegion0 = splitRegion0.expand(splitAxis[regionIndex].getBounds());
             }
 
             // Get second region
-            BoundingBox splitRegion1 = bestSplitAxis[0].getBounds();
-            for (int regionIndex = splitIndex + 1; regionIndex < childCount; regionIndex++) {
-                splitRegion1 = splitRegion1.expand(bestSplitAxis[regionIndex].getBounds());
+            BoundingBox splitRegion1 = splitAxis[0].getBounds();
+            for (int regionIndex = splitIndex + 1; regionIndex < splitAxis.length; regionIndex++) {
+                splitRegion1 = splitRegion1.expand(splitAxis[regionIndex].getBounds());
             }
 
             // Get overlap
@@ -210,9 +212,21 @@ public class RTree <DataObject extends BoundedObject> {
             }
         }
 
+        return bestSplitIndex;
+    }
+
+    private void splitNode(RTreeNode node, boolean reinsert) {
+        // Cannot split if node has less than 4 children (branch must have at least 2 children)
+        double childCount = node.size();
+        assert (childCount >= 4);
+
+        // Get split axis with minimum margin
+        RTreeNode[] bestSplitAxis = getBestSplitAxis(node);
+
+        // Reinsert split elements on first split
         if (reinsert) {
             ArrayList<RTreeNode> reinsertList = new ArrayList<>();
-            for (int splitIndex = bestSplitIndex; splitIndex < childCount; splitIndex++) {
+            for (int splitIndex = getBestSplitIndex(bestSplitAxis); splitIndex < childCount; splitIndex++) {
                 node.remove(bestSplitAxis[splitIndex]);
                 reinsertList.add(bestSplitAxis[splitIndex]);
             }
@@ -221,7 +235,7 @@ public class RTree <DataObject extends BoundedObject> {
             }
         }
 
-        // Split node
+        // Split node on subsequent splits
         else {
             // Get Parent
             RTreeNode parent = node.getParent();
@@ -231,10 +245,12 @@ public class RTree <DataObject extends BoundedObject> {
                 this.root = parent;
             }
 
+            // Create new split node
             RTreeNode<DataObject> splitNode = new RTreeNode();
             parent.insert(splitNode);
 
-            for (int splitIndex = bestSplitIndex; splitIndex < childCount; splitIndex++) {
+            // Distribute elements between the two nodes
+            for (int splitIndex = getBestSplitIndex(bestSplitAxis); splitIndex < childCount; splitIndex++) {
                 node.remove(bestSplitAxis[splitIndex]);
                 splitNode.insert(bestSplitAxis[splitIndex]);
             }
@@ -285,6 +301,7 @@ public class RTree <DataObject extends BoundedObject> {
     }
 
     public boolean insert(DataObject entry) {
+        // Start recursive insert
         if (!this.contains(entry)) {
             this.insert(this.root, new RTreeNode(entry), true);
             return true;
@@ -292,33 +309,67 @@ public class RTree <DataObject extends BoundedObject> {
         return false;
     }
 
-    public boolean remove(DataObject entry) {
-        return true;
+    private void remove(RTreeNode node) {
+        // Remove node
+        RTreeNode parent = node.getParent();
+        parent.remove(node);
+
+        // Check if parent has below minimum number of children
+        int maxChildren = this.branchMax;
+        if (parent.height() == 1) {
+            maxChildren = this.leafMax;
+        }
+
+        if (parent.size() < maxChildren / 2) {
+            // Propagate changes upward
+            this.remove(parent);
+
+            // Reinsert orphaned children
+            for (RTreeNode child : node.getChildren()) {
+                this.insert(this.root, child, false);
+            }
+        }
     }
 
-    private boolean contains(DataObject entry, RTreeNode node) {
-        if (node.data == entry) {
+    public boolean remove(DataObject entry) {
+        // Start propagating remove
+        RTreeNode node = this.getNode(entry, this.root);
+        if (node != null) {
+            this.remove(node);
             return true;
-        }
-        if (node.getBounds().encloses(entry.getBounds())) {
-            for (RTreeNode child : node.getChildren()) {
-                if (contains(entry, child)) {
-                    return true;
-                }
-            }
         }
         return false;
     }
 
+    private RTreeNode getNode(DataObject entry, RTreeNode node) {
+        if (node.data == entry) {
+            return node;
+        }
+        if (node.getBounds().encloses(entry.getBounds())) {
+            for (RTreeNode child : node.getChildren()) {
+                RTreeNode foundNode = getNode(entry, child);
+                if (foundNode != null) {
+                    return foundNode;
+                }
+            }
+        }
+        return null;
+    }
+
     public boolean contains(DataObject entry) {
-        return contains(entry, this.root);
+        // Start recursive search
+        return getNode(entry, this.root) != null;
     }
 
     public ArrayList<DataObject> getObjectsInBranch(RTreeNode<DataObject> node) {
         ArrayList<DataObject> objects = new ArrayList<>();
+
+        // Leaf node reached
         if (node.data != null) {
             objects.add(node.data);
         }
+
+        // Recurse until leaf node is reached
         else {
             for (RTreeNode child : node.getChildren()) {
                 objects.addAll(getObjectsInBranch(child));
@@ -329,13 +380,20 @@ public class RTree <DataObject extends BoundedObject> {
 
     public ArrayList<DataObject> getObjectsInRegion(BoundingBox region, RTreeNode<DataObject> node) {
         ArrayList<DataObject> overlappingObjects = new ArrayList<>();
+
+        // Add all leaf descendants if completely enclosed
         if (region.encloses(node.getBounds())) {
             overlappingObjects = getObjectsInBranch(node);
         }
+
+        // Add overlapping descendants
         else if (region.overlaps(node.getBounds())) {
+            // Leaf node reached
             if (node.height() == 0) {
                 overlappingObjects.add(node.data);
             }
+
+            // Get overlapping descendants
             else {
                 for (RTreeNode child : node.getChildren()) {
                     overlappingObjects.addAll(getObjectsInRegion(region, child));

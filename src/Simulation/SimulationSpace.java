@@ -74,18 +74,14 @@ public class SimulationSpace {
         ArrayList<SimulatedShape> checkedShapes = new ArrayList<>();
         for (SimulatedShape shape : this.shapes) {
             shape.getNode().setFill(Color.WHITE);
+            shape.moveTo(shape.getPosition().sum(Math.sin(currentTick / 100.0),0));
         }
 
         for (SimulatedShape shape : this.shapes) {
-            //shape.moveTo(shape.getPosition().sum(Math.sin(currentTick / 100.0),0));
-
-            /*
             if (shape.consumeChangedFlag()) {
-
-                this.shapes.remove(shape);
-                this.shapes.insert(shape);
+                this.shapeRegions.remove(shape);
+                this.shapeRegions.insert(shape);
             }
-             */
 
             if (!shape.isAnchored()) {
                 // Get rough collision
