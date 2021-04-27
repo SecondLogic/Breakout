@@ -5,6 +5,10 @@
 
     Breakout
     Game/Main.java
+
+    Sources:
+    Debanth, Multithreading in JavaFX
+        https://www.developer.com/design/multithreading-in-javafx/
  */
 
 package Game;
@@ -19,6 +23,9 @@ import javafx.concurrent.Task;
 import javafx.scene.layout.Pane;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class Main extends Application {
@@ -72,23 +79,29 @@ public class Main extends Application {
         // Game Runtime Loop
         Task gameLoop = new Task<Void>() {
             @Override
-            protected Void call() throws Exception {
-                while (!this.isCancelled()) {
-                    // Run simulation if not paused
-                    if (!isPaused) {
-                        if (!simulationSpace.isSimulating()) {
+            protected Void call() {
+                try {
+                    while (!this.isCancelled()) {
+                        // Run simulation if not paused
+                        if (!isPaused) {
+                            if (!simulationSpace.isSimulating()) {
 
-                            // Move Paddle
-                            Vector2 mouseLocation = inputListener.getMouseLocation();
-                            paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
+                                // Move Paddle
+                                Vector2 mouseLocation = inputListener.getMouseLocation();
+                                paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
 
-                            ball.moveTo(mouseLocation);
+                                ball.moveTo(mouseLocation);
 
-                            // Run simulation
-                            simulationSpace.simulate();
+                                // Run simulation
+                                simulationSpace.simulate();
+                            }
                         }
+                        Thread.sleep(16);  // ~60hz
                     }
-                    Thread.sleep(16);  // ~60hz
+                }
+                catch (Exception e) {
+                    // Display any errors that occur during runtime
+                    e.printStackTrace();
                 }
 
                 return null;
@@ -126,8 +139,8 @@ public class Main extends Application {
         primaryStage.show();
 
         // Run game loop
-        Thread runGameLoop = new Thread(gameLoop);
-        runGameLoop.start();
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(gameLoop);
     }
 
 

@@ -11,23 +11,23 @@
 package Simulation;
 
 import Structures.Vector2;
+import javafx.application.Platform;
 import javafx.scene.shape.Shape;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class SimulatedCircle extends SimulatedShape {
-    private final Circle uiNode;
-
     public SimulatedCircle(double radius, Vector2 position) {
-        super(new Vector2(radius * 2, radius * 2), position);
+        super(new Circle(), new Vector2(radius * 2, radius * 2), position);
 
-        Circle shape = new Circle();
-        shape.setRadius(radius);
-        shape.setCenterX(position.x);
-        shape.setCenterY(position.y);
-        shape.setFill(Color.WHITE);
+        Circle shape = (Circle) this.uiNode;
 
-        this.uiNode = shape;
+        Platform.runLater(() -> {
+            shape.setRadius(radius);
+            shape.setCenterX(position.x);
+            shape.setCenterY(position.y);
+            shape.setFill(Color.WHITE);
+        });
     }
 
     public SimulatedCircle(double radius, Vector2 position, SimulationSpace space) {
@@ -39,24 +39,26 @@ public class SimulatedCircle extends SimulatedShape {
     public void moveTo(Vector2 position) {
         super.moveTo(position);
 
-        this.uiNode.setCenterX(position.x);
-        this.uiNode.setCenterY(position.y);
+        Circle shape = (Circle) this.uiNode;
+        Platform.runLater(() -> {
+            shape.setCenterX(position.x);
+            shape.setCenterY(position.y);
+        });
     }
 
     public void resize(double radius) {
         super.resize(new Vector2(radius * 2, radius * 2));
-        this.uiNode.setRadius(radius);
-        this.uiNode.setCenterX(position.x);
-        this.uiNode.setCenterY(position.y);
+
+        Circle shape = (Circle) this.uiNode;
+        Platform.runLater(() -> {
+            shape.setRadius(radius);
+            shape.setCenterX(position.x);
+            shape.setCenterY(position.y);
+        });
     }
 
     @Override
     public void resize(Vector2 size) {
         this.resize(size.x / 2);
-    }
-
-    @Override
-    public Shape getNode() {
-        return this.uiNode;
     }
 }

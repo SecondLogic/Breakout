@@ -12,28 +12,24 @@ package Simulation;
 import Structures.BoundingBox;
 import Structures.BoundedObject;
 import Structures.Vector2;
+import javafx.application.Platform;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.shape.Shape;
+import javafx.scene.paint.Color;
 
-public class SimulatedShape implements BoundedObject {
+public abstract class SimulatedShape implements BoundedObject {
     protected Vector2 size, position, velocity;
+    protected Shape uiNode;
     private BoundingBox bounds;
     private boolean changed;
     private boolean anchored;
+    private ObservableList<Node> nodeParent;
     private double mass;
     private SimulationEventHandler<ShapeCollision> onCollide;
 
-    public SimulatedShape() {
-        this.size = Vector2.ZERO;
-        this.position = Vector2.ZERO;
-        this.velocity = Vector2.ZERO;
-        this.bounds = new BoundingBox();
-        this.changed = false;
-        this.anchored = true;
-        this.mass = 1;
-        this.onCollide = null;
-    }
-
-    public SimulatedShape(Vector2 size, Vector2 position) {
+    public SimulatedShape(Shape uiNode, Vector2 size, Vector2 position) {
+        this.uiNode = uiNode;
         this.size = size;
         this.position = position;
         this.velocity = Vector2.ZERO;
@@ -41,10 +37,6 @@ public class SimulatedShape implements BoundedObject {
         this.anchored = true;
         this.mass = 1;
         this.onCollide = null;
-    }
-
-    public Shape getNode() {
-        return null;
     }
 
     public void setAnchored(boolean anchored) {
@@ -81,6 +73,12 @@ public class SimulatedShape implements BoundedObject {
         }
     }
 
+    public void setColor(Color color) {
+        Platform.runLater(() -> {
+            uiNode.setFill(color);
+        });
+    }
+
     public Vector2 getPosition() {
         return this.position;
     }
@@ -90,6 +88,18 @@ public class SimulatedShape implements BoundedObject {
     }
 
     public BoundingBox getBounds() { return this.bounds; }
+
+    public void setNodeParent(ObservableList<Node> nodeParent) {
+        if (this.nodeParent != null) {
+            this.nodeParent.remove(this.uiNode);
+        }
+
+        this.nodeParent = nodeParent;
+
+        if (this.nodeParent != null) {
+            this.nodeParent.add(this.uiNode);
+        }
+    }
 
     public boolean consumeChangedFlag() {
         boolean flag = this.changed;

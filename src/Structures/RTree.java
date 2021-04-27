@@ -270,7 +270,7 @@ public class RTree <DataObject extends BoundedObject> {
         if (ancestorHeight == 0 || ancestorHeight == nodeHeight + 1) {
             if (ancestor.insert(node)) {
                 // Split node if overflow
-                int maxChildren = this.branchMax;
+                double maxChildren = this.branchMax;
                 if (ancestorHeight == 1) {
                     maxChildren = this.leafMax;
                 }
@@ -312,21 +312,33 @@ public class RTree <DataObject extends BoundedObject> {
     private void remove(RTreeNode node) {
         // Remove node
         RTreeNode parent = node.getParent();
-        parent.remove(node);
 
-        // Check if parent has below minimum number of children
-        int maxChildren = this.branchMax;
-        if (parent.height() == 1) {
-            maxChildren = this.leafMax;
-        }
+        if (parent != null) {
+            parent.remove(node);
 
-        if (parent.size() < maxChildren / 2) {
-            // Propagate changes upward
-            this.remove(parent);
+            // Check if parent has below minimum number of children
+            double maxChildren = this.branchMax;
+            if (parent.height() == 1) {
+                maxChildren = this.leafMax;
+            }
 
-            // Reinsert orphaned children
-            for (RTreeNode child : parent.getChildren()) {
-                this.insert(this.root, child, false);
+            if (parent.size() < Math.ceil(maxChildren / 2)) {
+                // Set new parent if one main branch remains
+                if (parent == this.root) {
+                    if (this.root.height() > 1 && this.root.size() == 1) {
+                        this.root = this.root.getChildren()[0];
+                    }
+                }
+
+                // Propagate changes upward
+                else {
+                    this.remove(parent);
+
+                    // Reinsert orphaned children
+                    for (RTreeNode child : parent.getChildren()) {
+                        this.insert(this.root, child, false);
+                    }
+                }
             }
         }
     }

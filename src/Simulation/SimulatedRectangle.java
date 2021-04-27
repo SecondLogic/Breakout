@@ -11,24 +11,24 @@
 package Simulation;
 
 import Structures.Vector2;
+import javafx.application.Platform;
 import javafx.scene.shape.Shape;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class SimulatedRectangle extends SimulatedShape {
-    private final Rectangle uiNode;
-
     public SimulatedRectangle(Vector2 size, Vector2 position) {
-        super(size, position);
+        super(new Rectangle(), size, position);
 
-        Rectangle shape = new Rectangle();
-        shape.setWidth(size.x);
-        shape.setHeight(size.y);
-        shape.setLayoutX(position.x - size.x / 2);
-        shape.setLayoutY(position.y - size.y / 2);
-        shape.setFill(Color.WHITE);
+        Rectangle shape = (Rectangle) this.uiNode;
 
-        this.uiNode = shape;
+        Platform.runLater(() -> {
+            shape.setWidth(size.x);
+            shape.setHeight(size.y);
+            shape.setLayoutX(position.x - size.x / 2);
+            shape.setLayoutY(position.y - size.y / 2);
+            shape.setFill(Color.WHITE);
+        });
     }
 
     public SimulatedRectangle(Vector2 size, Vector2 position, SimulationSpace space) {
@@ -40,21 +40,22 @@ public class SimulatedRectangle extends SimulatedShape {
     public void moveTo(Vector2 position) {
         super.moveTo(position);
 
-        this.uiNode.setLayoutX(this.position.x - size.x / 2);
-        this.uiNode.setLayoutY(this.position.y - size.y / 2);
+        Platform.runLater(() -> {
+            this.uiNode.setLayoutX(this.position.x - size.x / 2);
+            this.uiNode.setLayoutY(this.position.y - size.y / 2);
+        });
     }
 
     @Override
     public void resize(Vector2 size) {
         super.resize(size);
-        this.uiNode.setWidth(size.x);
-        this.uiNode.setHeight(size.y);
-        this.uiNode.setLayoutX(this.position.x - size.x / 2);
-        this.uiNode.setLayoutY(this.position.y - size.y / 2);
-    }
 
-    @Override
-    public Shape getNode() {
-        return this.uiNode;
+        Rectangle shape = (Rectangle) this.uiNode;
+        Platform.runLater(() -> {
+            shape.setWidth(size.x);
+            shape.setHeight(size.y);
+            shape.setLayoutX(this.position.x - size.x / 2);
+            shape.setLayoutY(this.position.y - size.y / 2);
+        });
     }
 }

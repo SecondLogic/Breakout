@@ -14,4 +14,4 @@ interface SimulationEventHandler<T extends SimulationEvent> {
     void run(T event);
 }
 
-public class SimulationEvent {}
+public abstract class SimulationEvent {}

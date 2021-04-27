@@ -28,7 +28,7 @@ public class SimulationSpace {
 
     public SimulationSpace(Scene scene) {
         this.shapes = new ArrayList<>();
-        this.shapeRegions = new RTree<>();
+        this.shapeRegions = new RTree<>(4,4);
         this.uiChildren = ((Pane) scene.getRoot()).getChildren();
         this.resetTick();
     }
@@ -36,22 +36,21 @@ public class SimulationSpace {
     public void add(SimulatedShape shape) {
         this.shapes.add(shape);
         this.shapeRegions.insert(shape);
-        this.uiChildren.add(shape.getNode());
+        shape.setNodeParent(this.uiChildren);
     }
 
     public void remove(SimulatedShape shape) {
         this.shapes.remove(shape);
         this.shapeRegions.remove(shape);
-        this.uiChildren.remove(shape.getNode());
+        shape.setNodeParent(null);
     }
 
     public void setScene(Scene scene) {
         ObservableList<Node> sceneChildren = ((Pane) scene.getRoot()).getChildren();
-        for (SimulatedShape shape : this.shapes) {
-            this.uiChildren.remove(shape.getNode());
-            sceneChildren.add(shape.getNode());
-        }
         this.uiChildren = sceneChildren;
+        for (SimulatedShape shape : this.shapes) {
+            shape.setNodeParent(this.uiChildren);
+        }
     }
 
     public boolean isSimulating() {
@@ -73,7 +72,7 @@ public class SimulationSpace {
         // Check unanchored shapes for collision
         ArrayList<SimulatedShape> checkedShapes = new ArrayList<>();
         for (SimulatedShape shape : this.shapes) {
-            shape.getNode().setFill(Color.WHITE);
+            shape.setColor(Color.WHITE);
             shape.moveTo(shape.getPosition().sum(Math.sin(currentTick / 100.0),0));
         }
 
@@ -99,8 +98,8 @@ public class SimulationSpace {
                         shape.triggerCollisionEvent(collision);
                         overlappedShape.triggerCollisionEvent(collision);
 
-                        shape.getNode().setFill(Color.RED);
-                        overlappedShape.getNode().setFill(Color.RED);
+                        shape.setColor(Color.RED);
+                        overlappedShape.setColor(Color.RED);
                     }
                 }
             }
