@@ -12,13 +12,12 @@ package Simulation;
 
 import Structures.Vector2;
 import javafx.application.Platform;
-import javafx.scene.shape.Shape;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class SimulatedCircle extends SimulatedShape {
     public SimulatedCircle(double radius, Vector2 position) {
-        super(new Circle(), new Vector2(radius * 2, radius * 2), position);
+        super(new Circle(), new Vector2(radius * 2, radius * 2), position, CollisionType.CIRCLE);
 
         Circle shape = (Circle) this.uiNode;
 

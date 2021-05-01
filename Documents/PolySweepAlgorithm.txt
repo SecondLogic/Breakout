@@ -1,0 +1,47 @@
+POINTS ARE ALL CONVERTED TO LOCAL FRAME (relative to relVelocity, origin at shape0.position)
+
+Points in clockwise (left to right) order
+point.left = higher normal projection
+point.right = lower normal projection
+
+initialize stopMaxSweep = false
+initialize stopMinSweep = false
+initialize dir = 1
+initialize point = points[0]
+initialize relXMax, relYMax, relYMin = point
+(I)
+if dir == 1
+	point = point.right
+else
+	point = point.left
+initialize relXMaxSet = false
+if point.relX > relXMax.relX
+	set relXMaxSet = true
+	set relXMax = point 
+if point.relY > relYMax.relY OR (point.nor == normalMax.nor AND relXMaxSet 
+	set relYMax = point 
+	if not relXMaxSet
+		set stopMaxSweep = true
+		set dir = -1
+		set point = relXMax
+elseif point.relY < relYMin.relY OR (point.nor == normalMax.nor AND relXMaxSet 
+	set relYMin = point
+	if not relXMaxSet
+		set stopMinSweep = true
+		set dir = -1
+		set point = relXMax
+elseif not relXMaxSet
+	set stopMaxSweep = true
+	set stopMinSweep = true
+if NOT (stopMaxSweep AND stopMinSweep)
+	goto I
+(II)
+point = relYMax.left
+if point.relY > relYMax.relY
+	relYMax = point
+	goto II
+(III)
+point = relYMin.right
+if point.relY < relYMin.relY
+	relYMin = point
+	goto III

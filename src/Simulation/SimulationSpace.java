@@ -65,23 +65,28 @@ public class SimulationSpace {
         if (this.simulating) {
             return;
         }
-
         this.simulating = true;
-        long currentTick = System.currentTimeMillis();
 
-        // Check unanchored shapes for collision
-        ArrayList<SimulatedShape> checkedShapes = new ArrayList<>();
+        long currentTick = System.currentTimeMillis();
+        double deltaTime = (currentTick - lastSimulationTick) / 1000.0;
+
+        // Update shapes
         for (SimulatedShape shape : this.shapes) {
             shape.setColor(Color.WHITE);
-            shape.moveTo(shape.getPosition().sum(Math.sin(currentTick / 100.0),0));
-        }
+            if (!shape.isAnchored()) {
+                shape.updateBoundsWithVelocity(deltaTime);
+            }
 
-        for (SimulatedShape shape : this.shapes) {
             if (shape.consumeChangedFlag()) {
                 this.shapeRegions.remove(shape);
                 this.shapeRegions.insert(shape);
             }
+        }
 
+        // Check unanchored shapes for collision
+        ArrayList<SimulatedShape> checkedShapes = new ArrayList<>();
+
+        for (SimulatedShape shape : this.shapes) {
             if (!shape.isAnchored()) {
                 // Get rough collision
                 ArrayList<SimulatedShape> overlaps = this.shapeRegions.getObjectsInRegion(shape.getBounds());
@@ -92,16 +97,10 @@ public class SimulationSpace {
 
                 // Handle fine collision
                 for (SimulatedShape overlappedShape : overlaps) {
-                    ShapeCollision collision = ShapeCollision.collide(shape, overlappedShape);
-
-                    if (collision.collided) {
-                        shape.triggerCollisionEvent(collision);
-                        overlappedShape.triggerCollisionEvent(collision);
-
-                        shape.setColor(Color.RED);
-                        overlappedShape.setColor(Color.RED);
-                    }
+                    ShapeCollision.collide(shape, overlappedShape, deltaTime);
                 }
+
+                shape.moveTo(shape.getPosition().sum(shape.getVelocity().product(deltaTime)));
             }
         }
 

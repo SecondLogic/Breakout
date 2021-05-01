@@ -33,9 +33,25 @@ public class Vector2 {
         return new Vector2(this.x * scale, this.y * scale);
     }
 
-    public Vector2 normal() {
+    public Vector2 product(double scaleX, double scaleY) {
+        return new Vector2(this.x * scaleX, this.y * scaleY);
+    }
+
+    public Vector2 product(Vector2 scale) {
+        return new Vector2(this.x * scale.x, this.y * scale.y);
+    }
+
+    public Vector2 unit() {
         double length = this.magnitude();
         return new Vector2(this.x / length, this.y / length);
+    }
+
+    public Vector2 left() {
+        return new Vector2(-this.y, this.x);
+    }
+
+    public Vector2 right() {
+        return new Vector2(this.y, -this.x);
     }
 
     public double magnitude() {

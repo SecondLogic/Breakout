@@ -19,9 +19,11 @@ import Simulation.SimulationSpace;
 import Structures.Vector2;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.layout.Pane;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.concurrent.ExecutorService;
@@ -57,22 +59,49 @@ public class Main extends Application {
         // Create objects
 
         // Paddle
-        Vector2 paddleSize = new Vector2(100,10);
+        Vector2 paddleSize = new Vector2(120,12);
         Vector2 paddlePos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y / 2);
         SimulatedRectangle paddle = new SimulatedRectangle(paddleSize, paddlePos, simulationSpace);
 
         // Ball
-        Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 8);
+        Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
         SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
+        ball.setOnCollide(collision -> {
+            if (collision.collidedShape == paddle) {
+                ball.setColor(Color.RED);
+            }
+            ball.setVelocity(Vector2.ZERO);
+        });
+        ball.setVelocity(new Vector2(1, -1).unit().product(500));
         ball.setAnchored(false);
 
+        // Walls
+        Vector2 wallTopSize = new Vector2(scene.getWidth(), 100);
+        Vector2 wallTopPos = new Vector2(scene.getWidth() / 2, -wallTopSize.y / 2);
+        SimulatedRectangle wallTop = new SimulatedRectangle(wallTopSize, wallTopPos, simulationSpace);
+
+        Vector2 wallLeftSize = new Vector2(100, scene.getHeight());
+        Vector2 wallLeftPos = new Vector2(-wallLeftSize.x / 2, scene.getHeight() / 2);
+        SimulatedRectangle wallLeft = new SimulatedRectangle(wallLeftSize, wallLeftPos, simulationSpace);
+
+        Vector2 wallRightSize = new Vector2(100, scene.getHeight());
+        Vector2 wallRightPos = new Vector2(scene.getWidth() + wallRightSize.x / 2, scene.getHeight() / 2);
+        SimulatedRectangle wallRight = new SimulatedRectangle(wallRightSize, wallRightPos, simulationSpace);
+
         // Bricks
+        Vector2 brickSize = new Vector2(60,24);
         for (int x = 0; x < 20; x++) {
             for (int y = 0; y < 5; y++) {
-                Vector2 brickSize = new Vector2(50,20);
-                Vector2 brickPos = new Vector2(30 + 55 * x, 15 + 25 * y);
-                //Vector2 brickPos = new Vector2(Math.random() * scene.getWidth(),Math.random() * scene.getHeight());
+                Vector2 brickPos = new Vector2((brickSize.x + 4) * (x + 0.5), (brickSize.y + 4) * (y + 0.5));
                 SimulatedRectangle brick = new SimulatedRectangle(brickSize, brickPos, simulationSpace);
+
+                brick.setOnCollide(collision -> {
+                    if (collision.collidedShape == ball) {
+                        Platform.runLater(() -> {
+                            simulationSpace.remove(brick);
+                        });
+                    }
+                });
             }
         }
 
@@ -89,8 +118,6 @@ public class Main extends Application {
                                 // Move Paddle
                                 Vector2 mouseLocation = inputListener.getMouseLocation();
                                 paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
-
-                                ball.moveTo(mouseLocation);
 
                                 // Run simulation
                                 simulationSpace.simulate();

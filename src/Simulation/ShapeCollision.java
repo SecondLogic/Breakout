@@ -12,22 +12,38 @@ package Simulation;
 
 import Structures.Vector2;
 
-public class ShapeCollision extends SimulationEvent {
-    public static ShapeCollision collide(SimulatedShape shape0, SimulatedShape shape1) {
-        // COLLIDE SHAPES
+import java.util.ArrayList;
 
-        return new ShapeCollision(true, Vector2.ZERO, shape0, shape1);
+public class ShapeCollision extends SimulationEvent {
+    public static boolean collide(SimulatedShape shape0, SimulatedShape shape1, double deltaTime) {
+        Vector2 collisionAxis = Vector2.ZERO;
+
+        // Get relative velocity of shape0 towards shape1
+        Vector2 relVelocity = shape0.velocity.sum(shape1.velocity.product(-1));
+
+        // Objects wont collide if they are stationary relative to each other
+        if (relVelocity == Vector2.ZERO) {
+            return false;
+        }
+
+        // Get collision axis and speed
+        Vector2 normalAxis = relVelocity.left();
+        double speed = relVelocity.magnitude();
+
+        ArrayList<Vector2> shape0Sweep = new ArrayList<>();
+
+
+        shape0.triggerCollisionEvent(new ShapeCollision(collisionAxis, shape1));
+        shape1.triggerCollisionEvent(new ShapeCollision(collisionAxis, shape0));
+
+        return false;
     }
 
-    public final boolean collided;
     public final Vector2 collisionAxis;
-    public final SimulatedShape shape0;
-    public final SimulatedShape shape1;
+    public final SimulatedShape collidedShape;
 
-    private ShapeCollision(boolean collided, Vector2 collisionAxis, SimulatedShape shape0, SimulatedShape shape1) {
-        this.collided = collided;
+    private ShapeCollision(Vector2 collisionAxis, SimulatedShape collidedShape) {
         this.collisionAxis = collisionAxis;
-        this.shape0 = shape0;
-        this.shape1 = shape1;
+        this.collidedShape = collidedShape;
     }
 }

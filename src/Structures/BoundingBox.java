@@ -49,6 +49,10 @@ public class BoundingBox {
         return (this.max.x - this.min.x + this.max.y - this.min.y) * 2;
     }
 
+    public Vector2 position() {
+        return new Vector2((this.min.x + this.max.x) / 2, (this.min.y + this.max.y) / 2);
+    }
+
     public BoundingBox expand(Vector2 point) {
         Vector2 eMin = new Vector2(Math.min(this.min.x, point.x), Math.min(this.min.y, point.y));
         Vector2 eMax = new Vector2(Math.max(this.max.x, point.x), Math.max(this.max.y, point.y));
