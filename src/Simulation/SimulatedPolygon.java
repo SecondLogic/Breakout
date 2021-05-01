@@ -22,12 +22,14 @@ public class SimulatedPolygon extends SimulatedShape {
     private final Vector2[] points;
 
     public SimulatedPolygon(Vector2 size, Vector2 position, Vector2[] points) {
-        super(new Polygon(), size, position, CollisionType.POLYGON);
+        super(new Polygon(), size, position);
+        assert(points.length >= 3);
         this.points = points;
 
         Polygon shape = (Polygon) this.uiNode;
 
         ArrayList<Double> pointList = new ArrayList<>();
+
         for (Vector2 point : this.points) {
             pointList.add(point.x);
             pointList.add(point.y);
@@ -35,8 +37,8 @@ public class SimulatedPolygon extends SimulatedShape {
 
         Platform.runLater(() -> {
             shape.getPoints().addAll(pointList);
-            shape.setLayoutX(position.x - size.x / 2);
-            shape.setLayoutY(position.y - size.y / 2);
+            shape.setLayoutX(position.x);
+            shape.setLayoutY(position.y);
             shape.setFill(Color.WHITE);
         });
     }
@@ -46,13 +48,17 @@ public class SimulatedPolygon extends SimulatedShape {
         space.add(this);
     }
 
+    public Vector2[] getPoints() {
+        return this.points;
+    }
+
     @Override
     public void moveTo(Vector2 position) {
         super.moveTo(position);
 
         Platform.runLater(() -> {
-            this.uiNode.setLayoutX(this.position.x - size.x / 2);
-            this.uiNode.setLayoutY(this.position.y - size.y / 2);
+            this.uiNode.setLayoutX(this.position.x);
+            this.uiNode.setLayoutY(this.position.y);
         });
     }
 
@@ -76,8 +82,8 @@ public class SimulatedPolygon extends SimulatedShape {
 
         Platform.runLater(() -> {
             shape.getPoints().setAll(pointList);
-            shape.setLayoutX(this.position.x - size.x / 2);
-            shape.setLayoutY(this.position.y - size.y / 2);
+            shape.setLayoutX(this.position.x);
+            shape.setLayoutY(this.position.y);
         });
     }
 

@@ -21,6 +21,15 @@ public class Vector2 {
         this.y = y;
     }
 
+    public static Vector2 rotationToVector(double rotation) {
+        rotation = rotation % 360;
+        if (rotation < 0) {
+            rotation += 360;
+        }
+
+        return new Vector2(Math.cos(Math.toRadians(rotation)), Math.sin(Math.toRadians(rotation)));
+    }
+
     public Vector2 sum(Vector2 v) {
         return new Vector2(this.x + v.x, this.y + v.y);
     }
@@ -60,6 +69,15 @@ public class Vector2 {
 
     public double dot(Vector2 v) {
         return this.x * v.x + this.y * v.y;
+    }
+
+    public Vector2 rotate(double rotation) {
+        return Vector2.rotationToVector(rotation + Math.toDegrees(Math.atan(this.y / this.x))).product(this.magnitude());
+    }
+
+    public Vector2 toLocalSpace(Vector2 v) {
+        v = v.unit();
+        return new Vector2(this.dot(v), this.dot(v.left()));
     }
 
     @Override

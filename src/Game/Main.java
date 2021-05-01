@@ -24,6 +24,8 @@ import javafx.concurrent.Task;
 import javafx.scene.layout.Pane;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.util.concurrent.ExecutorService;
@@ -64,8 +66,12 @@ public class Main extends Application {
         SimulatedRectangle paddle = new SimulatedRectangle(paddleSize, paddlePos, simulationSpace);
 
         // Ball
+        Vector2 ballSize = new Vector2(16,16);
         Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
-        SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
+        SimulatedRectangle ball = new SimulatedRectangle(ballSize, ballPos, simulationSpace);
+
+        //Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
+        //SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
         ball.setOnCollide(collision -> {
             if (collision.collidedShape == paddle) {
                 ball.setColor(Color.RED);
@@ -105,6 +111,15 @@ public class Main extends Application {
             }
         }
 
+        // Debug Text
+        Text cursorPos = new Text();
+        cursorPos.setLayoutX(4);
+        cursorPos.setLayoutY(scene.getHeight() - 48);
+        cursorPos.setText("Cursor: ");
+        cursorPos.setFont(Font.font("Courier New", 14));
+        cursorPos.setFill(Color.WHITE);
+        mainPane.getChildren().add(cursorPos);
+
         // Game Runtime Loop
         Task gameLoop = new Task<Void>() {
             @Override
@@ -121,6 +136,11 @@ public class Main extends Application {
 
                                 // Run simulation
                                 simulationSpace.simulate();
+
+                                // Debug Text
+                                Platform.runLater(() -> {
+                                    cursorPos.setText("Cursor: " + mouseLocation);
+                                });
                             }
                         }
                         Thread.sleep(16);  // ~60hz

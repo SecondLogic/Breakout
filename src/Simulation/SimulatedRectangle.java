@@ -15,10 +15,10 @@ import javafx.scene.shape.Polygon;
 public class SimulatedRectangle extends SimulatedPolygon {
     public SimulatedRectangle(Vector2 size, Vector2 position) {
         super(size, position, new Vector2[] {
-            Vector2.ZERO,
-            new Vector2(size.x, 0),
-            size,
-            new Vector2(0, size.y),
+            size.product(-.5),
+            size.product(.5, -.5),
+            size.product(.5),
+            size.product(-.5, .5),
         });
     }
 

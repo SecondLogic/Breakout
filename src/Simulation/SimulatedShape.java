@@ -19,11 +19,8 @@ import javafx.scene.shape.Shape;
 import javafx.scene.paint.Color;
 
 public abstract class SimulatedShape implements BoundedObject {
-    public enum CollisionType {CIRCLE, POLYGON};
-
     protected Vector2 size, position, velocity;
     protected Shape uiNode;
-    public final CollisionType collisionType;
     private ObservableList<Node> nodeParent;
     private BoundingBox bounds;
     private boolean changed;
@@ -31,8 +28,7 @@ public abstract class SimulatedShape implements BoundedObject {
     private double mass, rotation;
     private SimulationEventHandler<ShapeCollision> onCollide;
 
-    public SimulatedShape(Shape uiNode, Vector2 size, Vector2 position, CollisionType collisionType) {
-        this.collisionType = collisionType;
+    public SimulatedShape(Shape uiNode, Vector2 size, Vector2 position) {
         this.uiNode = uiNode;
         this.size = size;
         this.position = position;

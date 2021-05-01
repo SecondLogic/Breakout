@@ -17,7 +17,7 @@ import javafx.scene.shape.Circle;
 
 public class SimulatedCircle extends SimulatedShape {
     public SimulatedCircle(double radius, Vector2 position) {
-        super(new Circle(), new Vector2(radius * 2, radius * 2), position, CollisionType.CIRCLE);
+        super(new Circle(), new Vector2(radius * 2, radius * 2), position);
 
         Circle shape = (Circle) this.uiNode;
 

@@ -1,4 +1,5 @@
 POINTS ARE ALL CONVERTED TO LOCAL FRAME (relative to relVelocity, origin at shape0.position)
+https://www.desmos.com/calculator/17p7clv1hy
 
 Points in clockwise (left to right) order
 point.left = higher normal projection
