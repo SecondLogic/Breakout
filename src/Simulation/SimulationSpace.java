@@ -96,11 +96,15 @@ public class SimulationSpace {
                 overlaps.removeAll(checkedShapes);
 
                 // Handle fine collision
+                boolean collided = false;
                 for (SimulatedShape overlappedShape : overlaps) {
-                    ShapeCollision.collide(shape, overlappedShape, deltaTime);
+                    overlappedShape.setColor(Color.RED);
+                    collided = collided || ShapeCollision.collide(shape, overlappedShape, deltaTime);
                 }
 
-                shape.moveTo(shape.getPosition().sum(shape.getVelocity().product(deltaTime)));
+                if (!collided) {
+                    shape.moveTo(shape.getPosition().sum(shape.getVelocity().product(deltaTime)));
+                }
             }
         }
 

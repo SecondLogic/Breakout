@@ -80,6 +80,10 @@ public class Vector2 {
         return new Vector2(this.dot(v), this.dot(v.left()));
     }
 
+    public Vector2 reflect(Vector2 v) {
+        return this.sum(v.product(-2 * this.dot(v)));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

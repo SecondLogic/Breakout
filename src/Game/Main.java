@@ -21,6 +21,7 @@ import Structures.Vector2;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
@@ -76,9 +77,10 @@ public class Main extends Application {
             if (collision.collidedShape == paddle) {
                 ball.setColor(Color.RED);
             }
-            ball.setVelocity(Vector2.ZERO);
+            ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis));
+            ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
         });
-        ball.setVelocity(new Vector2(1, -1).unit().product(500));
+        ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
         ball.setAnchored(false);
 
         // Walls
@@ -115,7 +117,7 @@ public class Main extends Application {
         Text cursorPos = new Text();
         cursorPos.setLayoutX(4);
         cursorPos.setLayoutY(scene.getHeight() - 48);
-        cursorPos.setText("Cursor: ");
+        cursorPos.setText("Cursor: \nBall Pos: \nPress [R] to reset ball");
         cursorPos.setFont(Font.font("Courier New", 14));
         cursorPos.setFill(Color.WHITE);
         mainPane.getChildren().add(cursorPos);
@@ -139,8 +141,18 @@ public class Main extends Application {
 
                                 // Debug Text
                                 Platform.runLater(() -> {
-                                    cursorPos.setText("Cursor: " + mouseLocation);
+                                    cursorPos.setText(
+                                            "Cursor: " + mouseLocation
+                                        + "\nBall Pos: (" + Math.floor(ball.getPosition().x) + ", " + Math.floor(ball.getPosition().y)
+                                        + ")\nPress [R] to reset ball");
                                 });
+
+                                // Reset Ball
+                                if (inputListener.isPressed(KeyCode.R)) {
+                                    ball.moveTo(ballPos);
+                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
+                                }
+
                             }
                         }
                         Thread.sleep(16);  // ~60hz

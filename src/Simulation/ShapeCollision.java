@@ -172,8 +172,6 @@ public class ShapeCollision extends SimulationEvent {
     }
 
     public static boolean collide(SimulatedShape shape0, SimulatedShape shape1, double deltaTime) {
-        Vector2 collisionPoint = Vector2.ZERO;
-
         // Get relative velocity of shape0 towards shape1
         Vector2 relVelocity = shape0.velocity.sum(shape1.velocity.product(-1));
 
@@ -238,6 +236,7 @@ public class ShapeCollision extends SimulationEvent {
             // Get points of contact
             ArrayList<Vector2> contactPoints = new ArrayList<>();
             double minDistance = maxDisplacement;
+            Vector2 collisionAxis = relVelocity.left().unit();
 
             SweepPoint point = shape0Ex[0];
             SweepPoint edge0 = shape1Ex[0];
@@ -259,6 +258,7 @@ public class ShapeCollision extends SimulationEvent {
                         }
                         double velocityAlpha = distance / maxDisplacement;
                         contactPoints.add(point.world.sum(shape0.velocity.product(velocityAlpha)));
+                        collisionAxis = edge1.world.sum(edge0.world.product(-1)).unit();
                     }
 
                     point = point.left();
@@ -288,6 +288,7 @@ public class ShapeCollision extends SimulationEvent {
                         }
                         double velocityAlpha = distance / maxDisplacement;
                         contactPoints.add(point.world.sum(shape1.velocity.product(velocityAlpha)));
+                        collisionAxis = edge1.world.sum(edge0.world.product(-1)).unit();
                     }
 
                     point = point.left();
@@ -303,27 +304,43 @@ public class ShapeCollision extends SimulationEvent {
                     averagePoint = averagePoint.sum(contactPoint);
                 }
                 averagePoint.product(1 / contactPoints.size());
-                shape0.triggerCollisionEvent(new ShapeCollision(averagePoint, shape1));
-                shape1.triggerCollisionEvent(new ShapeCollision(averagePoint, shape0));
-                System.out.println(contactPoints.size());
+
+                if (contactPoints.size() > 1) {
+                    collisionAxis = contactPoints.get(0).sum(contactPoints.get(1).product(-1)).unit();
+                }
+
+                double velocityAlpha = minDistance / maxDisplacement;
+                double leftOverTime = (1 - velocityAlpha) * deltaTime;
+
+                shape0.moveTo(shape0.position.sum(shape0.velocity.product(deltaTime * velocityAlpha)));
+                shape1.moveTo(shape1.position.sum(shape1.velocity.product(deltaTime * velocityAlpha)));
+
+                shape0.triggerCollisionEvent(new ShapeCollision(averagePoint, collisionAxis, shape1, leftOverTime));
+                shape1.triggerCollisionEvent(new ShapeCollision(averagePoint, collisionAxis, shape0, leftOverTime));
+
+                System.out.println(velocityAlpha);
                 System.out.println(averagePoint);
+                System.out.println(collisionAxis);
                 return true;
             }
             return false;
         }
         else {
-            shape0.triggerCollisionEvent(new ShapeCollision(collisionPoint, shape1));
-            shape1.triggerCollisionEvent(new ShapeCollision(collisionPoint, shape0));
+            shape0.triggerCollisionEvent(new ShapeCollision(Vector2.ZERO, Vector2.ZERO, shape1, 0));
+            shape1.triggerCollisionEvent(new ShapeCollision(Vector2.ZERO, Vector2.ZERO, shape0, 0));
         }
 
         return false;
     }
 
-    public final Vector2 collisionPoint;
+    public final Vector2 collisionPoint, collisionAxis;
     public final SimulatedShape collidedShape;
+    public final double leftOverTime;
 
-    private ShapeCollision(Vector2 collisionPoint, SimulatedShape collidedShape) {
+    private ShapeCollision(Vector2 collisionPoint, Vector2 collisionAxis, SimulatedShape collidedShape, double leftOverTime) {
         this.collisionPoint = collisionPoint;
+        this.collisionAxis = collisionAxis;
         this.collidedShape = collidedShape;
+        this.leftOverTime = leftOverTime;
     }
 }
