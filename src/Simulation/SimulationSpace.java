@@ -84,7 +84,6 @@ public class SimulationSpace {
 
         // Update shapes
         for (SimulatedShape shape : this.shapes) {
-            shape.setColor(Color.WHITE);
             if (!shape.isAnchored()) {
                 shape.updateBoundsWithVelocity(deltaTime);
             }
@@ -110,7 +109,6 @@ public class SimulationSpace {
                 // Handle fine collision
                 boolean collided = false;
                 for (SimulatedShape overlappedShape : overlaps) {
-                    overlappedShape.setColor(Color.RED);
                     collided = collided || ShapeCollision.collide(shape, overlappedShape, deltaTime);
                 }
 

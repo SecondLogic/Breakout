@@ -22,10 +22,12 @@ import Structures.Vector2;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -36,8 +38,22 @@ import java.util.concurrent.Executors;
 
 
 public class Main extends Application {
+    // Settings
+    public static double defaultBallSpeed = 500;    // How much speed the ball has when the game starts
+    public static double minBallDeflection = 20;    // How much angle the ball has when it hits the center of the paddle
+    public static double maxBallDeflection = 60;    // How much angle the ball has when it hits the end of the paddle
+    public static double ballSpeedIncrement = 10;   // How much the ball gets faster when it hits something
 
-    // Game paused status
+    // Status vars
+    public static double ballSpeed = defaultBallSpeed;
+    public static SimulatedShape lastCollided = null;;
+    public static void incrementBallSpeed(SimulatedShape collided) {
+        if (collided != lastCollided) {
+            ballSpeed += ballSpeedIncrement;
+            lastCollided = collided;
+        }
+    }
+
     public static boolean isPaused = false;
     public static void setPaused(boolean paused) {
         isPaused = paused;
@@ -70,14 +86,21 @@ public class Main extends Application {
 
         //Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
         //SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
+
+        // Ball collision resolution
         ball.setOnCollide(collision -> {
+            incrementBallSpeed(collision.collidedShape);
             if (collision.collidedShape == paddle) {
-                ball.setColor(Color.RED);
+                double angleAlpha = (ball.getPosition().x - paddle.getPosition().x) / (paddle.getSize().x / 2);
+                double angle = -90 + Math.sin(angleAlpha) * minBallDeflection + angleAlpha * (maxBallDeflection - minBallDeflection);
+                ball.setVelocity(Vector2.rotationToVector(angle).product(ballSpeed));
             }
-            ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis.left()));
+            else {
+                ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis.left()));
+            }
             ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
         });
-        ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
+        ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(ballSpeed));
         ball.setAnchored(false);
 
         // Walls (off-screen)
@@ -115,8 +138,8 @@ public class Main extends Application {
         // Debug Text
         Text cursorPos = new Text();
         cursorPos.setLayoutX(4);
-        cursorPos.setLayoutY(scene.getHeight() - 90);
-        cursorPos.setText("Cursor: \nBall Pos: \nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
+        cursorPos.setLayoutY(scene.getHeight() - 110);
+        cursorPos.setText("Cursor: \nBall Pos: \nBall Speed:\nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
         cursorPos.setFont(Font.font("Courier New", 14));
         cursorPos.setFill(Color.WHITE);
         mainPane.getChildren().add(cursorPos);
@@ -130,15 +153,15 @@ public class Main extends Application {
                         // Run simulation if not paused
                         if (!isPaused) {
                             if (!simulationSpace.isSimulating()) {
-
                                 // Move Paddle
                                 Vector2 mouseLocation = inputListener.getMouseLocation();
                                 paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
 
                                 // Reset Ball if reached bottom
                                 if (ball.getPosition().y > scene.getHeight()) {
+                                    ballSpeed = defaultBallSpeed;
                                     ball.moveTo(defaultBallPos);
-                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
+                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(ballSpeed));
                                 }
 
                                 // Run simulation
@@ -149,13 +172,15 @@ public class Main extends Application {
                                     cursorPos.setText(
                                             "Cursor: " + mouseLocation
                                         + "\nBall Pos: (" + Math.floor(ball.getPosition().x) + ", " + Math.floor(ball.getPosition().y)
-                                        + ")\nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
+                                        + ")\nBall Speed: " + ballSpeed
+                                        + "\nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
                                 });
 
                                 // Reset Ball
                                 if (inputListener.isPressed(KeyCode.R)) {
+                                    ballSpeed = defaultBallSpeed;
                                     ball.moveTo(defaultBallPos);
-                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
+                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(ballSpeed));
                                 }
                                 else if (inputListener.isPressed(KeyCode.M)) {
                                     ball.moveTo(mouseLocation);
@@ -165,7 +190,7 @@ public class Main extends Application {
                                     if (dir == Vector2.ZERO) {
                                         dir = new Vector2(0,-1);
                                     }
-                                    ball.setVelocity(dir.unit().product(500));
+                                    ball.setVelocity(dir.unit().product(ballSpeed));
                                     ball.moveTo(ball.getPosition().sum(ball.getVelocity().unit().product(.01)));
                                 }
                             }
