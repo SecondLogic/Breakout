@@ -72,7 +72,10 @@ public class Vector2 {
     }
 
     public Vector2 rotate(double rotation) {
-        return Vector2.rotationToVector(rotation + Math.toDegrees(Math.atan(this.y / this.x))).product(this.magnitude());
+        rotation = Math.toRadians(rotation);
+        double sinR = Math.sin(rotation);
+        double cosR = Math.cos(rotation);
+        return new Vector2(cosR * this.x - sinR * this.y, sinR * this.x + cosR * this.y);
     }
 
     public Vector2 toLocalSpace(Vector2 v) {

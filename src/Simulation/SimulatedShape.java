@@ -47,14 +47,18 @@ public abstract class SimulatedShape implements BoundedObject {
     public boolean isAnchored() { return this.anchored; }
 
     public void setNodeParent(ObservableList<Node> nodeParent) {
-        if (this.nodeParent != null) {
-            this.nodeParent.remove(this.uiNode);
-        }
-
+        ObservableList<Node> oldParent = this.nodeParent;
         this.nodeParent = nodeParent;
 
-        if (this.nodeParent != null) {
-            this.nodeParent.add(this.uiNode);
+        if (oldParent != null) {
+            Platform.runLater(() -> {
+                oldParent.remove(this.uiNode);
+            });
+        }
+        if (nodeParent != null) {
+            Platform.runLater(() -> {
+                nodeParent.add(this.uiNode);
+            });
         }
     }
 

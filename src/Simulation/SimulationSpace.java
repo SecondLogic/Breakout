@@ -20,7 +20,7 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 
 public class SimulationSpace {
-    private ArrayList<SimulatedShape> shapes;
+    private ArrayList<SimulatedShape> shapes, addQueue, removeQueue;
     private RTree<SimulatedShape> shapeRegions;
     private ObservableList<Node> uiChildren;
     private long lastSimulationTick;
@@ -28,21 +28,33 @@ public class SimulationSpace {
 
     public SimulationSpace(Scene scene) {
         this.shapes = new ArrayList<>();
+        this.addQueue = new ArrayList<>();
+        this.removeQueue = new ArrayList<>();
         this.shapeRegions = new RTree<>(4,4);
         this.uiChildren = ((Pane) scene.getRoot()).getChildren();
         this.resetTick();
     }
 
     public void add(SimulatedShape shape) {
-        this.shapes.add(shape);
-        this.shapeRegions.insert(shape);
-        shape.setNodeParent(this.uiChildren);
+        if (!this.simulating) {
+            this.shapes.add(shape);
+            this.shapeRegions.insert(shape);
+            shape.setNodeParent(this.uiChildren);
+        }
+        else {
+            addQueue.add(shape);
+        }
     }
 
     public void remove(SimulatedShape shape) {
-        this.shapes.remove(shape);
-        this.shapeRegions.remove(shape);
-        shape.setNodeParent(null);
+        if (!this.simulating) {
+            this.shapes.remove(shape);
+            this.shapeRegions.remove(shape);
+            shape.setNodeParent(null);
+        }
+        else {
+            removeQueue.add(shape);
+        }
     }
 
     public void setScene(Scene scene) {
@@ -110,5 +122,16 @@ public class SimulationSpace {
 
         this.lastSimulationTick = currentTick;
         this.simulating = false;
+
+        // Perform waiting tasks
+        for (SimulatedShape shape : addQueue) {
+            this.add(shape);
+        }
+        addQueue.clear();
+
+        for (SimulatedShape shape : removeQueue) {
+            this.remove(shape);
+        }
+        removeQueue.clear();
     }
 }

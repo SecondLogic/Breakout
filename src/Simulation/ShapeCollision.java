@@ -22,7 +22,7 @@ class SweepPoint {
     public SweepPoint(Vector2 meshPoint, Vector2 position, Vector2 origin, double rotation, Vector2 localSpace, int sweepIndex) {
         meshPoint = meshPoint.rotate(rotation);
         this.world = meshPoint.sum(position);
-        this.local = meshPoint.sum(position.sum(origin.product(-1))).toLocalSpace(localSpace);
+        this.local = this.world.sum(origin.product(-1)).toLocalSpace(localSpace);
         this.sweepIndex = sweepIndex;
         this.left = null;
         this.right = null;
@@ -53,13 +53,11 @@ public class ShapeCollision extends SimulationEvent {
         SweepPoint minY = maxX;
         SweepPoint maxY = maxX;
 
-        boolean stopMaxSweep = false;
-        boolean stopMinSweep = false;
         SweepPoint point = maxX;
         int sweepDir = 1;
 
         // Sweep to find max X and possible Y extrema
-        while (!(stopMaxSweep && stopMinSweep)) {
+        while (true) {
             // Get next point
             int sweepIndex = (point.sweepIndex + sweepDir) % points.length;
             if (sweepIndex < 0) {
@@ -88,26 +86,24 @@ public class ShapeCollision extends SimulationEvent {
 
             // Set max X
             boolean maxXChanged = false;
-            if ((!invertX && point.local.x > maxX.local.x) || (invertX && point.local.x < maxX.local.x)) {
+            if ((!invertX && point.local.x >= maxX.local.x) || (invertX && point.local.x <= maxX.local.x)) {
                 maxX = point;
                 maxXChanged = true;
             }
 
             // Set max Y
-            if (!stopMaxSweep && (point.local.y > maxY.local.y || (point.local.y == maxY.local.y && maxXChanged))) {
+            if (point.local.y > maxY.local.y || (point.local.y == maxY.local.y && maxXChanged)) {
                 maxY = point;
                 if (!maxXChanged) {
-                    stopMaxSweep = true;
                     sweepDir = -1;
                     point = maxX;
                 }
             }
 
             // Set min Y
-            else if (!stopMinSweep && (point.local.y < minY.local.y || (point.local.y == minY.local.y && maxXChanged))) {
+            else if (point.local.y < minY.local.y || (point.local.y == minY.local.y && maxXChanged)) {
                 minY = point;
                 if (!maxXChanged) {
-                    stopMinSweep = true;
                     sweepDir = -1;
                     point = maxX;
                 }
@@ -115,25 +111,43 @@ public class ShapeCollision extends SimulationEvent {
 
             // Stop sweep if nothing changed
             else if (!maxXChanged) {
-                stopMaxSweep = true;
-                stopMinSweep = true;
+                if (sweepDir == -1) {
+                    break;
+                }
+                else {
+                    sweepDir = -1;
+                    point = maxX;
+                }
             }
         }
 
         // Sweep outwards to find actual Y extrema
         while (true) {
-            SweepPoint oldPoint = point;
-            point = maxY.left();
+            SweepPoint oldPoint = maxY;
+            int sweepIndex;
+            if (invertX) {
+                point = maxY.left();
+                sweepIndex = (oldPoint.sweepIndex - 1) % points.length;
+            }
+            else {
+                point = maxY.right();
+                sweepIndex = (oldPoint.sweepIndex + 1) % points.length;
+            }
             if (point == null) {
-                int sweepIndex = (oldPoint.sweepIndex - 1) % points.length;
                 if (sweepIndex < 0) {
                     sweepIndex += points.length;
                 }
                 point = new SweepPoint(points[sweepIndex], shape.position, origin, shape.getRotation(), relVelocity, sweepIndex);
                 if (point.local.y > maxY.local.y) {
                     maxY = point;
-                    oldPoint.setLeft(point);
-                    point.setRight(oldPoint);
+                    if (invertX) {
+                        oldPoint.setLeft(point);
+                        point.setRight(oldPoint);
+                    }
+                    else {
+                        oldPoint.setRight(point);
+                        point.setLeft(oldPoint);
+                    }
                 }
                 else {
                     break;
@@ -145,15 +159,31 @@ public class ShapeCollision extends SimulationEvent {
         }
 
         while (true) {
-            SweepPoint oldPoint = point;
-            point = minY.right();
+            SweepPoint oldPoint = minY;
+            int sweepIndex;
+            if (invertX) {
+                point = minY.right();
+                sweepIndex = (oldPoint.sweepIndex + 1) % points.length;
+            }
+            else {
+                point = minY.left();
+                sweepIndex = (oldPoint.sweepIndex - 1) % points.length;
+            }
             if (point == null) {
-                int sweepIndex = (oldPoint.sweepIndex + 1) % points.length;
+                if (sweepIndex < 0) {
+                    sweepIndex += points.length;
+                }
                 point = new SweepPoint(points[sweepIndex], shape.position, origin, shape.getRotation(), relVelocity, sweepIndex);
                 if (point.local.y < minY.local.y) {
                     minY = point;
-                    oldPoint.setRight(point);
-                    point.setLeft(oldPoint);
+                    if (invertX) {
+                        oldPoint.setRight(point);
+                        point.setLeft(oldPoint);
+                    }
+                    else {
+                        oldPoint.setLeft(point);
+                        point.setRight(oldPoint);
+                    }
                 }
                 else {
                     break;
@@ -165,15 +195,21 @@ public class ShapeCollision extends SimulationEvent {
         }
 
         // Trim sweep result to extrema
-        maxY.setLeft(null);
-        minY.setRight(null);
+        if (invertX) {
+            maxY.setLeft(null);
+            minY.setRight(null);
+        }
+        else {
+            maxY.setRight(null);
+            minY.setLeft(null);
+        }
 
         return new SweepPoint[] {minY, maxY, maxX};
     }
 
     public static boolean collide(SimulatedShape shape0, SimulatedShape shape1, double deltaTime) {
         // Get relative velocity of shape0 towards shape1
-        Vector2 relVelocity = shape0.velocity.sum(shape1.velocity.product(-1));
+        Vector2 relVelocity = shape0.velocity.sum(shape1.velocity.product(-1)).product(deltaTime);
 
         // Objects wont collide if they are stationary relative to each other
         if (relVelocity == Vector2.ZERO) {
@@ -188,49 +224,14 @@ public class ShapeCollision extends SimulationEvent {
             SweepPoint[] shape0Ex = sweepShape((SimulatedPolygon) shape0, shape0.position, relVelocity, false);
             SweepPoint[] shape1Ex = sweepShape((SimulatedPolygon) shape1, shape0.position, relVelocity, true);
 
-            // No collision if extrema along the line of displacement are farther than maxDisplacement
+            // No collision if extrema along the line of displacement are farther apart than maxDisplacement
             if (shape1Ex[2].local.x - shape0Ex[2].local.x > maxDisplacement) {
                 return false;
             }
 
-            // Trim sweep to overlapping bounds
-            if (shape0Ex[0].local.y > shape1Ex[0].local.y) {
-                do {
-                    shape1Ex[0] = shape1Ex[0].left();
-                    // No overlap: no collision
-                    if (shape1Ex[0] == null) {
-                        return false;
-                    }
-                } while(shape0Ex[0].local.y > shape1Ex[0].local.y);
-            }
-            else {
-                while(shape1Ex[0].local.y > shape0Ex[0].local.y) {
-                    shape0Ex[0] = shape0Ex[0].left();
-                    // No overlap: no collision
-                    if (shape0Ex[0] == null) {
-                        return false;
-                    }
-                }
-            }
-
-            if (shape0Ex[1].local.y < shape1Ex[1].local.x) {
-                do {
-                    shape1Ex[1] = shape1Ex[1].right();
-                    // No overlap: no collision
-                    if (shape1Ex[1] == null) {
-                        return false;
-                    }
-                } while(shape0Ex[1].local.y > shape1Ex[1].local.x);
-
-            }
-            else {
-                while(shape1Ex[1].local.y < shape0Ex[1].local.y) {
-                    shape0Ex[1] = shape0Ex[1].right();
-                    // No overlap: no collision
-                    if (shape0Ex[1] == null) {
-                        return false;
-                    }
-                }
+            // No collision if shapes don't overlap along the local Y axis
+            if (shape0Ex[0].local.y >= shape1Ex[1].local.y || shape1Ex[0].local.y >= shape0Ex[1].local.y) {
+                return false;
             }
 
             // Get points of contact
@@ -241,60 +242,61 @@ public class ShapeCollision extends SimulationEvent {
             SweepPoint point = shape0Ex[0];
             SweepPoint edge0 = shape1Ex[0];
             SweepPoint edge1 = edge0.left();
-            while (point != shape0Ex[1].left()) {
-                while (edge1 != null && edge1.local.y < point.local.y) {
-                    edge0 = edge1;
-                    edge1 = edge0.left();
-                }
-                if (edge1 != null) {
-                    double edgeAlpha = (point.local.y - edge0.local.y) / (edge1.local.y - edge0.local.y);
-                    double edgeX = edge0.local.x * (1 - edgeAlpha) + edge1.local.x * edgeAlpha;
-                    double distance = edgeX - point.local.x;
-
-                    if (distance <= minDistance) {
-                        if (distance < minDistance) {
-                            contactPoints.clear();
-                            minDistance = distance;
-                        }
-                        double velocityAlpha = distance / maxDisplacement;
-                        contactPoints.add(point.world.sum(shape0.velocity.product(velocityAlpha)));
-                        collisionAxis = edge1.world.sum(edge0.world.product(-1)).unit();
+            while (point != shape0Ex[1].right()) {
+                double distance = minDistance + 1;
+                if (point.local.y > edge0.local.y) {
+                    while (edge1 != null && point.local.y > edge1.local.y) {
+                        edge0 = edge1;
+                        edge1 = edge0.left();
                     }
-
-                    point = point.left();
+                    if (edge1 != null) {
+                        double edgeAlpha = (point.local.y - edge0.local.y) / (edge1.local.y - edge0.local.y);
+                        distance = (edge0.local.x * (1 - edgeAlpha) + edge1.local.x * edgeAlpha) - point.local.x;
+                    }
                 }
-                else {
-                    break;
+                else if (point.local.y == edge0.local.y) {
+                    distance = edge0.local.x - point.local.x;
                 }
+                if (distance <= minDistance) {
+                    if (distance < minDistance) {
+                        contactPoints.clear();
+                        minDistance = distance;
+                    }
+                    double velocityAlpha = minDistance / maxDisplacement;
+                    contactPoints.add(point.world.sum(shape0.velocity.product(velocityAlpha * deltaTime)));
+                }
+                point = point.right();
             }
 
             point = shape1Ex[0];
             edge0 = shape0Ex[0];
-            edge1 = edge0.left();
+            edge1 = edge0.right();
             while (point != shape1Ex[1].left()) {
-                while (edge1 != null && edge1.local.y < point.local.y) {
-                    edge0 = edge1;
-                    edge1 = edge0.left();
-                }
-                if (edge1 != null) {
-                    double edgeAlpha = (point.local.y - edge0.local.y) / (edge1.local.y - edge0.local.y);
-                    double edgeX = edge0.local.x * (1 - edgeAlpha) + edge1.local.x * edgeAlpha;
-                    double distance = point.local.x - edgeX;
-
-                    if (distance <= minDistance) {
-                        if (distance < minDistance) {
-                            contactPoints.clear();
-                            minDistance = distance;
-                        }
-                        double velocityAlpha = distance / maxDisplacement;
-                        contactPoints.add(point.world.sum(shape1.velocity.product(velocityAlpha)));
-                        collisionAxis = edge1.world.sum(edge0.world.product(-1)).unit();
+                double distance = minDistance + 1;
+                if (point.local.y > edge0.local.y) {
+                    while (edge1 != null && point.local.y > edge1.local.y) {
+                        edge0 = edge1;
+                        edge1 = edge0.right();
                     }
-
-                    point = point.left();
-                } else {
-                    break;
+                    if (edge1 != null) {
+                        double edgeAlpha = (point.local.y - edge0.local.y) / (edge1.local.y - edge0.local.y);
+                        distance = point.local.x - (edge0.local.x * (1 - edgeAlpha) + edge1.local.x * edgeAlpha);
+                        collisionAxis = edge1.local.sum(edge0.local.product(-1)).unit();
+                    }
                 }
+                else if (point.local.y == edge0.local.y) {
+                    distance = point.local.x - edge0.local.x;
+                }
+                boolean collideThreshold = Math.abs(distance - minDistance) < 1;
+                if (distance <= minDistance || collideThreshold) {
+                    if (distance < minDistance && !collideThreshold) {
+                        contactPoints.clear();
+                    }
+                    minDistance = Math.min(distance, minDistance);
+                    double velocityAlpha = minDistance / maxDisplacement;
+                    contactPoints.add(point.world.sum(shape0.velocity.product(velocityAlpha * deltaTime)));
+                }
+                point = point.left();
             }
 
             // Trigger collision if contact points exist
@@ -318,7 +320,7 @@ public class ShapeCollision extends SimulationEvent {
                 shape0.triggerCollisionEvent(new ShapeCollision(averagePoint, collisionAxis, shape1, leftOverTime));
                 shape1.triggerCollisionEvent(new ShapeCollision(averagePoint, collisionAxis, shape0, leftOverTime));
 
-                System.out.println(velocityAlpha);
+                System.out.println(contactPoints.size() + ", " + minDistance + ", " + maxDisplacement + ", " + velocityAlpha);
                 System.out.println(averagePoint);
                 System.out.println(collisionAxis);
                 return true;
@@ -326,8 +328,8 @@ public class ShapeCollision extends SimulationEvent {
             return false;
         }
         else {
-            shape0.triggerCollisionEvent(new ShapeCollision(Vector2.ZERO, Vector2.ZERO, shape1, 0));
-            shape1.triggerCollisionEvent(new ShapeCollision(Vector2.ZERO, Vector2.ZERO, shape0, 0));
+            shape0.triggerCollisionEvent(new ShapeCollision(shape0.position, shape0.velocity.left().unit(), shape1, deltaTime));
+            shape1.triggerCollisionEvent(new ShapeCollision(shape1.position, shape1.velocity.left().unit(), shape0, deltaTime));
         }
 
         return false;

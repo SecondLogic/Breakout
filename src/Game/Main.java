@@ -43,11 +43,6 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        // Settings
-        //final double PLATFORM_SPEED = 1500;  // Pixels per second
-
-        boolean paused = false;
-
         // Create Scene
         Pane mainPane = new Pane();
         mainPane.setStyle("-fx-background-color: #000000;");
@@ -78,7 +73,7 @@ public class Main extends Application {
                 ball.setColor(Color.RED);
             }
             ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis));
-            ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
+            //ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
         });
         ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
         ball.setAnchored(false);
@@ -116,8 +111,8 @@ public class Main extends Application {
         // Debug Text
         Text cursorPos = new Text();
         cursorPos.setLayoutX(4);
-        cursorPos.setLayoutY(scene.getHeight() - 48);
-        cursorPos.setText("Cursor: \nBall Pos: \nPress [R] to reset ball");
+        cursorPos.setLayoutY(scene.getHeight() - 90);
+        cursorPos.setText("Cursor: \nBall Pos: \nPress [R] to reset ball\nHold [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
         cursorPos.setFont(Font.font("Courier New", 14));
         cursorPos.setFill(Color.WHITE);
         mainPane.getChildren().add(cursorPos);
@@ -144,7 +139,7 @@ public class Main extends Application {
                                     cursorPos.setText(
                                             "Cursor: " + mouseLocation
                                         + "\nBall Pos: (" + Math.floor(ball.getPosition().x) + ", " + Math.floor(ball.getPosition().y)
-                                        + ")\nPress [R] to reset ball");
+                                        + ")\nPress [R] to reset ball\nHold [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
                                 });
 
                                 // Reset Ball
@@ -152,7 +147,12 @@ public class Main extends Application {
                                     ball.moveTo(ballPos);
                                     ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
                                 }
-
+                                else if (inputListener.isPressed(KeyCode.M)) {
+                                    ball.moveTo(mouseLocation);
+                                }
+                                else if (inputListener.isPressed(KeyCode.V)) {
+                                    ball.setVelocity(mouseLocation.sum(ball.getPosition().product(-1)).unit().product(500));
+                                }
                             }
                         }
                         Thread.sleep(16);  // ~60hz
