@@ -10,12 +10,10 @@
 package Simulation;
 
 import Structures.RTree;
-import Structures.Vector2;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
 
 import java.util.ArrayList;
 

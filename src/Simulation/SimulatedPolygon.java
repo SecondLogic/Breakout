@@ -7,7 +7,6 @@
     Simulation/SimulatedPolygon.java
  */
 
-
 package Simulation;
 
 import Structures.Vector2;

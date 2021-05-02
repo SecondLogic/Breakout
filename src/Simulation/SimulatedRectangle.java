@@ -10,7 +10,6 @@
 package Simulation;
 
 import Structures.Vector2;
-import javafx.scene.shape.Polygon;
 
 public class SimulatedRectangle extends SimulatedPolygon {
     public SimulatedRectangle(Vector2 size, Vector2 position) {

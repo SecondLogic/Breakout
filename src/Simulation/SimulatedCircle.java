@@ -7,7 +7,6 @@
     Simulation/SimulatedRectangle.java
  */
 
-
 package Simulation;
 
 import Structures.Vector2;
