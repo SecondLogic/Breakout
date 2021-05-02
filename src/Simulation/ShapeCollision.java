@@ -243,7 +243,8 @@ public class ShapeCollision extends SimulationEvent {
             SweepPoint edge0 = shape1Ex[0];
             SweepPoint edge1 = edge0.left();
             while (point != shape0Ex[1].right()) {
-                double distance = minDistance + 1;
+                double distance = minDistance;
+                Vector2 axis = null;
                 if (point.local.y > edge0.local.y) {
                     while (edge1 != null && point.local.y > edge1.local.y) {
                         edge0 = edge1;
@@ -252,6 +253,7 @@ public class ShapeCollision extends SimulationEvent {
                     if (edge1 != null) {
                         double edgeAlpha = (point.local.y - edge0.local.y) / (edge1.local.y - edge0.local.y);
                         distance = (edge0.local.x * (1 - edgeAlpha) + edge1.local.x * edgeAlpha) - point.local.x;
+                        axis = edge1.world.sum(edge0.world.product(-1)).unit();
                     }
                 }
                 else if (point.local.y == edge0.local.y) {
@@ -261,6 +263,9 @@ public class ShapeCollision extends SimulationEvent {
                     if (distance < minDistance) {
                         contactPoints.clear();
                         minDistance = distance;
+                        if (axis != null) {
+                            collisionAxis = axis;
+                        }
                     }
                     double velocityAlpha = minDistance / maxDisplacement;
                     contactPoints.add(point.world.sum(shape0.velocity.product(velocityAlpha * deltaTime)));
@@ -272,7 +277,8 @@ public class ShapeCollision extends SimulationEvent {
             edge0 = shape0Ex[0];
             edge1 = edge0.right();
             while (point != shape1Ex[1].left()) {
-                double distance = minDistance + 1;
+                double distance = minDistance;
+                Vector2 axis = null;
                 if (point.local.y > edge0.local.y) {
                     while (edge1 != null && point.local.y > edge1.local.y) {
                         edge0 = edge1;
@@ -281,18 +287,20 @@ public class ShapeCollision extends SimulationEvent {
                     if (edge1 != null) {
                         double edgeAlpha = (point.local.y - edge0.local.y) / (edge1.local.y - edge0.local.y);
                         distance = point.local.x - (edge0.local.x * (1 - edgeAlpha) + edge1.local.x * edgeAlpha);
-                        collisionAxis = edge1.local.sum(edge0.local.product(-1)).unit();
+                        axis = edge1.world.sum(edge0.world.product(-1)).unit();
                     }
                 }
                 else if (point.local.y == edge0.local.y) {
                     distance = point.local.x - edge0.local.x;
                 }
-                boolean collideThreshold = Math.abs(distance - minDistance) < 1;
-                if (distance <= minDistance || collideThreshold) {
-                    if (distance < minDistance && !collideThreshold) {
+                if (distance <= minDistance) {
+                    if (distance < minDistance) {
                         contactPoints.clear();
+                        minDistance = distance;
+                        if (axis != null) {
+                            collisionAxis = axis;
+                        }
                     }
-                    minDistance = Math.min(distance, minDistance);
                     double velocityAlpha = minDistance / maxDisplacement;
                     contactPoints.add(point.world.sum(shape0.velocity.product(velocityAlpha * deltaTime)));
                 }
@@ -302,27 +310,27 @@ public class ShapeCollision extends SimulationEvent {
             // Trigger collision if contact points exist
             if (contactPoints.size() > 0) {
                 Vector2 averagePoint = Vector2.ZERO;
+                double minX = contactPoints.get(0).x;
+                double minY = contactPoints.get(0).y;
+                double maxX = minX;
+                double maxY = minY;
                 for (Vector2 contactPoint : contactPoints) {
+                    minX = Math.min(minX, contactPoint.x);
+                    minY = Math.min(minY, contactPoint.y);
+                    maxX = Math.max(maxX, contactPoint.x);
+                    maxY = Math.max(maxY, contactPoint.y);
                     averagePoint = averagePoint.sum(contactPoint);
                 }
-                averagePoint.product(1 / contactPoints.size());
-
-                if (contactPoints.size() > 1) {
-                    collisionAxis = contactPoints.get(0).sum(contactPoints.get(1).product(-1)).unit();
-                }
+                averagePoint = averagePoint.product(1 / contactPoints.size());
 
                 double velocityAlpha = minDistance / maxDisplacement;
                 double leftOverTime = (1 - velocityAlpha) * deltaTime;
 
-                shape0.moveTo(shape0.position.sum(shape0.velocity.product(deltaTime * velocityAlpha)));
-                shape1.moveTo(shape1.position.sum(shape1.velocity.product(deltaTime * velocityAlpha)));
+                shape0.moveTo(shape0.position.sum(shape0.velocity.product(deltaTime * velocityAlpha)).sum(shape0.velocity.unit().product(-.01)));
+                shape1.moveTo(shape1.position.sum(shape1.velocity.product(deltaTime * velocityAlpha)).sum(shape1.velocity.unit().product(-.01)));
 
                 shape0.triggerCollisionEvent(new ShapeCollision(averagePoint, collisionAxis, shape1, leftOverTime));
                 shape1.triggerCollisionEvent(new ShapeCollision(averagePoint, collisionAxis, shape0, leftOverTime));
-
-                System.out.println(contactPoints.size() + ", " + minDistance + ", " + maxDisplacement + ", " + velocityAlpha);
-                System.out.println(averagePoint);
-                System.out.println(collisionAxis);
                 return true;
             }
             return false;

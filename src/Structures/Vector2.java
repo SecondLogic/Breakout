@@ -51,8 +51,13 @@ public class Vector2 {
     }
 
     public Vector2 unit() {
-        double length = this.magnitude();
-        return new Vector2(this.x / length, this.y / length);
+        if (this.equals(Vector2.ZERO)) {
+            return this;
+        }
+        else {
+            double length = this.magnitude();
+            return new Vector2(this.x / length, this.y / length);
+        }
     }
 
     public Vector2 left() {

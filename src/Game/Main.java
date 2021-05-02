@@ -15,6 +15,7 @@ package Game;
 
 import Simulation.SimulatedRectangle;
 import Simulation.SimulatedCircle;
+import Simulation.SimulatedShape;
 import Simulation.SimulationSpace;
 import Structures.Vector2;
 
@@ -29,6 +30,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -63,8 +65,8 @@ public class Main extends Application {
 
         // Ball
         Vector2 ballSize = new Vector2(16,16);
-        Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
-        SimulatedRectangle ball = new SimulatedRectangle(ballSize, ballPos, simulationSpace);
+        Vector2 defaultBallPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 20);
+        SimulatedRectangle ball = new SimulatedRectangle(ballSize, defaultBallPos, simulationSpace);
 
         //Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
         //SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
@@ -72,13 +74,13 @@ public class Main extends Application {
             if (collision.collidedShape == paddle) {
                 ball.setColor(Color.RED);
             }
-            ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis));
-            //ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
+            ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis.left()));
+            ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
         });
         ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
         ball.setAnchored(false);
 
-        // Walls
+        // Walls (off-screen)
         Vector2 wallTopSize = new Vector2(scene.getWidth(), 100);
         Vector2 wallTopPos = new Vector2(scene.getWidth() / 2, -wallTopSize.y / 2);
         SimulatedRectangle wallTop = new SimulatedRectangle(wallTopSize, wallTopPos, simulationSpace);
@@ -93,12 +95,14 @@ public class Main extends Application {
 
         // Bricks
         Vector2 brickSize = new Vector2(60,24);
+        ArrayList<SimulatedShape> bricks = new ArrayList<>();
         for (int x = 0; x < 20; x++) {
             for (int y = 0; y < 5; y++) {
                 Vector2 brickPos = new Vector2((brickSize.x + 4) * (x + 0.5), (brickSize.y + 4) * (y + 0.5));
                 SimulatedRectangle brick = new SimulatedRectangle(brickSize, brickPos, simulationSpace);
-
+                bricks.add(brick);
                 brick.setOnCollide(collision -> {
+                    bricks.remove(brick);
                     if (collision.collidedShape == ball) {
                         Platform.runLater(() -> {
                             simulationSpace.remove(brick);
@@ -112,7 +116,7 @@ public class Main extends Application {
         Text cursorPos = new Text();
         cursorPos.setLayoutX(4);
         cursorPos.setLayoutY(scene.getHeight() - 90);
-        cursorPos.setText("Cursor: \nBall Pos: \nPress [R] to reset ball\nHold [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
+        cursorPos.setText("Cursor: \nBall Pos: \nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
         cursorPos.setFont(Font.font("Courier New", 14));
         cursorPos.setFill(Color.WHITE);
         mainPane.getChildren().add(cursorPos);
@@ -131,6 +135,12 @@ public class Main extends Application {
                                 Vector2 mouseLocation = inputListener.getMouseLocation();
                                 paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
 
+                                // Reset Ball if reached bottom
+                                if (ball.getPosition().y > scene.getHeight()) {
+                                    ball.moveTo(defaultBallPos);
+                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
+                                }
+
                                 // Run simulation
                                 simulationSpace.simulate();
 
@@ -139,19 +149,24 @@ public class Main extends Application {
                                     cursorPos.setText(
                                             "Cursor: " + mouseLocation
                                         + "\nBall Pos: (" + Math.floor(ball.getPosition().x) + ", " + Math.floor(ball.getPosition().y)
-                                        + ")\nPress [R] to reset ball\nHold [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
+                                        + ")\nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
                                 });
 
                                 // Reset Ball
                                 if (inputListener.isPressed(KeyCode.R)) {
-                                    ball.moveTo(ballPos);
+                                    ball.moveTo(defaultBallPos);
                                     ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(500));
                                 }
                                 else if (inputListener.isPressed(KeyCode.M)) {
                                     ball.moveTo(mouseLocation);
                                 }
                                 else if (inputListener.isPressed(KeyCode.V)) {
-                                    ball.setVelocity(mouseLocation.sum(ball.getPosition().product(-1)).unit().product(500));
+                                    Vector2 dir = mouseLocation.sum(ball.getPosition().product(-1));
+                                    if (dir == Vector2.ZERO) {
+                                        dir = new Vector2(0,-1);
+                                    }
+                                    ball.setVelocity(dir.unit().product(500));
+                                    ball.moveTo(ball.getPosition().sum(ball.getVelocity().unit().product(.01)));
                                 }
                             }
                         }
