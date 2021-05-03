@@ -24,12 +24,8 @@ public class Vector2 {
     }
 
     public static Vector2 rotationToVector(double rotation) {
-        rotation = rotation % 360;
-        if (rotation < 0) {
-            rotation += 360;
-        }
-
-        return new Vector2(Math.cos(Math.toRadians(rotation)), Math.sin(Math.toRadians(rotation)));
+        rotation = Math.toRadians(rotation);
+        return new Vector2(Math.cos(rotation), Math.sin(rotation));
     }
 
     public Vector2 sum(Vector2 v) {
@@ -57,17 +53,12 @@ public class Vector2 {
             return this;
         }
         else {
-            double length = this.magnitude();
-            return new Vector2(this.x / length, this.y / length);
+            return this.product(1 / this.magnitude());
         }
     }
 
-    public Vector2 left() {
+    public Vector2 normal() {
         return new Vector2(-this.y, this.x);
-    }
-
-    public Vector2 right() {
-        return new Vector2(this.y, -this.x);
     }
 
     public double magnitude() {
@@ -78,19 +69,21 @@ public class Vector2 {
         return this.x * v.x + this.y * v.y;
     }
 
-    public Vector2 rotate(double rotation) {
-        rotation = Math.toRadians(rotation);
-        double sinR = Math.sin(rotation);
-        double cosR = Math.cos(rotation);
-        return new Vector2(cosR * this.x - sinR * this.y, sinR * this.x + cosR * this.y);
-    }
-
     public Vector2 toLocalSpace(Vector2 v) {
         v = v.unit();
-        return new Vector2(this.dot(v), this.dot(v.left()));
+        return new Vector2(this.dot(v), this.dot(v.normal()));
+    }
+
+    public Vector2 toWorldSpace(Vector2 v) {
+        return this.toLocalSpace(v.product(1, -1));
+    }
+
+    public Vector2 rotate(double rotation) {
+        return this.toWorldSpace(Vector2.rotationToVector(rotation));
     }
 
     public Vector2 reflect(Vector2 v) {
+        v = v.unit();
         return this.sum(v.product(-2 * this.dot(v)));
     }
 

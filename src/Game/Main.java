@@ -42,6 +42,10 @@ public class Main extends Application {
     public static double maxBallDeflection = 60;    // How much angle the ball has when it hits the end of the paddle
     public static double ballSpeedIncrement = 10;   // How much the ball gets faster when it hits something
 
+    public static double ballRadius = 8;            // Ball Size
+    public static String ballType = "Circle";       // Circle or Square ball
+    public static double paddleWidth = 120;        // Paddle width
+
     // Status vars
     public static double ballSpeed = defaultBallSpeed;
     public static SimulatedShape lastCollided = null;;
@@ -73,17 +77,20 @@ public class Main extends Application {
         // Create objects
 
         // Paddle
-        Vector2 paddleSize = new Vector2(120,12);
+        Vector2 paddleSize = new Vector2(paddleWidth, 12);
         Vector2 paddlePos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y / 2);
         SimulatedRectangle paddle = new SimulatedRectangle(paddleSize, paddlePos, simulationSpace);
 
         // Ball
-        Vector2 ballSize = new Vector2(16,16);
-        Vector2 defaultBallPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 20);
-        SimulatedRectangle ball = new SimulatedRectangle(ballSize, defaultBallPos, simulationSpace);
-
-        //Vector2 ballPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - 12);
-        //SimulatedCircle ball = new SimulatedCircle(8, ballPos, simulationSpace);
+        Vector2 defaultBallPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - ballRadius - 2);
+        SimulatedShape ball;
+        if (ballType == "Circle") {
+            ball = new SimulatedCircle(ballRadius, defaultBallPos, simulationSpace);
+        }
+        else {
+            Vector2 ballSize = new Vector2(ballRadius * 2, ballRadius * 2);
+            ball = new SimulatedRectangle(ballSize, defaultBallPos, simulationSpace);
+        }
 
         // Ball collision resolution
         ball.setOnCollide(collision -> {
@@ -94,11 +101,11 @@ public class Main extends Application {
                 ball.setVelocity(Vector2.rotationToVector(angle).product(ballSpeed));
             }
             else {
-                ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis.left()));
+                ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis.normal()));
             }
             ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
         });
-        ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(ballSpeed));
+        ball.setVelocity(Vector2.rotationToVector(-90 - maxBallDeflection + Math.random() * maxBallDeflection * 2).product(ballSpeed));
         ball.setAnchored(false);
 
         // Walls (off-screen)
@@ -159,7 +166,7 @@ public class Main extends Application {
                                 if (ball.getPosition().y > scene.getHeight()) {
                                     ballSpeed = defaultBallSpeed;
                                     ball.moveTo(defaultBallPos);
-                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(ballSpeed));
+                                    ball.setVelocity(Vector2.rotationToVector(-90 - maxBallDeflection + Math.random() * maxBallDeflection * 2).product(ballSpeed));
                                 }
 
                                 // Run simulation
@@ -178,7 +185,7 @@ public class Main extends Application {
                                 if (inputListener.isPressed(KeyCode.R)) {
                                     ballSpeed = defaultBallSpeed;
                                     ball.moveTo(defaultBallPos);
-                                    ball.setVelocity(Vector2.rotationToVector(-45 + Math.random() * -90).product(ballSpeed));
+                                    ball.setVelocity(Vector2.rotationToVector(-90 - maxBallDeflection + Math.random() * maxBallDeflection * 2).product(ballSpeed));
                                 }
                                 else if (inputListener.isPressed(KeyCode.M)) {
                                     ball.moveTo(mouseLocation);
