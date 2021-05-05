@@ -4,7 +4,7 @@
     03/26/2021
 
     Breakout
-    Game/KeybindListener.java
+    Game/InputListener.java
  */
 
 package Game;
@@ -23,6 +23,7 @@ public class InputListener {
 
     private Scene currentScene = null;
     private HashMap<KeyCode, Boolean> keyStatus;
+    private HashMap<KeyCode, Boolean> keyPress;
 
     private EventHandler<KeyEvent> onKeyPressed;
     private EventHandler<KeyEvent> onKeyReleased;
@@ -32,16 +33,21 @@ public class InputListener {
 
     public InputListener(Scene scene) {
         this.keyStatus = new HashMap<>();
+        this.keyPress = new HashMap<>();
 
         this.mouseLocation = Vector2.ZERO;
 
         this.onKeyPressed = input -> {
+            if (!this.isPressed(input.getCode())) {
+                this.keyPress.put(input.getCode(), true);
+            }
             this.keyStatus.put(input.getCode(), true);
             input.consume();
         };
 
         this.onKeyReleased = input -> {
             this.keyStatus.put(input.getCode(), false);
+            this.keyPress.put(input.getCode(), false);
             input.consume();
         };
 
@@ -58,6 +64,15 @@ public class InputListener {
 
     public boolean isPressed(KeyCode key) {
         return this.keyStatus.getOrDefault(key, false);
+    }
+
+    public boolean consumePress(KeyCode key) {
+        boolean pressed = this.keyPress.getOrDefault(key, false);
+        if (pressed) {
+            this.keyPress.put(key, false);
+            return true;
+        }
+        return false;
     }
 
     public Vector2 getMouseLocation() {

@@ -80,7 +80,7 @@ public class SimulationSpace {
         long currentTick = System.currentTimeMillis();
         double deltaTime = (currentTick - lastSimulationTick) / 1000.0;
 
-        // Update shapes
+        // Update RTree to reflect changes
         for (SimulatedShape shape : this.shapes) {
             if (!shape.isAnchored()) {
                 shape.updateBoundsWithVelocity(deltaTime);

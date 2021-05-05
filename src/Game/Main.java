@@ -5,248 +5,158 @@
 
     Breakout
     Game/Main.java
-
-    Sources:
-    Debanth, Multithreading in JavaFX
-        https://www.developer.com/design/multithreading-in-javafx/
  */
 
 package Game;
 
-import Simulation.SimulatedRectangle;
-import Simulation.SimulatedCircle;
-import Simulation.SimulatedShape;
-import Simulation.SimulationSpace;
-import Structures.Vector2;
-
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.concurrent.Task;
-import javafx.scene.input.KeyCode;
-import javafx.scene.layout.Pane;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.io.*;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 
 public class Main extends Application {
-    // Settings
-    public static double defaultBallSpeed = 500;    // How much speed the ball has when the game starts
-    public static double minBallDeflection = 20;    // How much angle the ball has when it hits the center of the paddle
-    public static double maxBallDeflection = 60;    // How much angle the ball has when it hits the end of the paddle
-    public static double ballSpeedIncrement = 10;   // How much the ball gets faster when it hits something
+    private int stagesUnlocked = 1;
+    private BreakoutRoom currentRoom = null;
+    private Stage primaryStage;
+    private Scene mainMenu;
+    private ArrayList<Button> roomButtons;
 
-    public static double ballRadius = 8;            // Ball Size
-    public static String ballType = "Circle";       // Circle or Square ball
-    public static double paddleWidth = 120;        // Paddle width
-
-    // Status vars
-    public static double ballSpeed = defaultBallSpeed;
-    public static SimulatedShape lastCollided = null;;
-    public static void incrementBallSpeed(SimulatedShape collided) {
-        if (collided != lastCollided) {
-            ballSpeed += ballSpeedIncrement;
-            lastCollided = collided;
+    public void setUnlocked(int stage) {
+        stagesUnlocked = Math.max(stagesUnlocked, stage);
+        for (int i = 1; i <= roomButtons.size(); i++) {
+            Button roomButton = roomButtons.get(i - 1);
+            if (i <= stagesUnlocked) {
+                roomButton.setText("Room " + i);
+            }
+            else {
+                roomButton.setText("Locked");
+            }
+            final int roomNumber = i;
+            roomButton.setOnMouseClicked(event -> {
+                playRoom(roomNumber);
+            });
         }
     }
 
-    public static boolean isPaused = false;
-    public static void setPaused(boolean paused) {
-        isPaused = paused;
+    public void playRoom(int roomNumber) {
+        if (roomNumber <= stagesUnlocked) {
+            if (currentRoom != null) {
+                currentRoom.stop();
+            }
+
+            currentRoom = new BreakoutRoom(this, new BreakoutRoomSettings(), () -> {
+                currentRoom = null;
+                Platform.runLater(() ->{
+                    primaryStage.setScene(mainMenu);
+                });
+            });
+            currentRoom.play(primaryStage);
+        }
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception{
-        // Create Scene
-        Pane mainPane = new Pane();
-        mainPane.setStyle("-fx-background-color: #000000;");
-        Scene scene = new Scene(mainPane, 1280, 720);
+    public void start(Stage primaryStage) throws Exception {
+        this.primaryStage = primaryStage;
 
-        // Initialize input listener
-        InputListener inputListener = new InputListener(scene);
+        Pane mainMenuPane = new Pane();
+        mainMenuPane.setStyle("-fx-background-color: #000000;");
+        this.mainMenu = new Scene(mainMenuPane, 1280, 720);
 
-        // Create Simulation Space
-        SimulationSpace simulationSpace = new SimulationSpace(scene);
+        // Title
+        Text title = new Text();
+        title.setFont(new Font("Arial Bold", mainMenu.getHeight() / 6));
+        title.setFill(Color.WHITE);
+        title.setText("BreakoutFX");
+        title.setLayoutX(mainMenu.getWidth() * 0.5 - title.getLayoutBounds().getWidth() / 2);
+        title.setLayoutY(mainMenu.getHeight() * .333 - title.getLayoutBounds().getHeight() / 2);
+        mainMenuPane.getChildren().add(title);
 
-        // Create objects
+        // Read saved data
+        try {
+            BufferedReader savedDataRead = new BufferedReader(new FileReader("UnlockedStages.dat"));
 
-        // Paddle
-        Vector2 paddleSize = new Vector2(paddleWidth, 12);
-        Vector2 paddlePos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y / 2);
-        SimulatedRectangle paddle = new SimulatedRectangle(paddleSize, paddlePos, simulationSpace);
-
-        // Ball
-        Vector2 defaultBallPos = new Vector2(scene.getWidth() / 2, scene.getHeight() - paddleSize.y - ballRadius - 2);
-        SimulatedShape ball;
-        if (ballType == "Circle") {
-            ball = new SimulatedCircle(ballRadius, defaultBallPos, simulationSpace);
-        }
-        else {
-            Vector2 ballSize = new Vector2(ballRadius * 2, ballRadius * 2);
-            ball = new SimulatedRectangle(ballSize, defaultBallPos, simulationSpace);
-        }
-
-        // Ball collision resolution
-        ball.setOnCollide(collision -> {
-            incrementBallSpeed(collision.collidedShape);
-            if (collision.collidedShape == paddle) {
-                double angleAlpha = (ball.getPosition().x - paddle.getPosition().x) / (paddle.getSize().x / 2);
-                double angle = -90 + Math.sin(angleAlpha) * minBallDeflection + angleAlpha * (maxBallDeflection - minBallDeflection);
-                ball.setVelocity(Vector2.rotationToVector(angle).product(ballSpeed));
-            }
-            else {
-                ball.setVelocity(ball.getVelocity().reflect(collision.collisionAxis.normal()));
-            }
-            ball.moveTo(ball.getPosition().sum(ball.getVelocity().product(collision.leftOverTime)));
-        });
-        ball.setVelocity(Vector2.rotationToVector(-90 - maxBallDeflection + Math.random() * maxBallDeflection * 2).product(ballSpeed));
-        ball.setAnchored(false);
-
-        // Walls (off-screen)
-        Vector2 wallTopSize = new Vector2(scene.getWidth(), 100);
-        Vector2 wallTopPos = new Vector2(scene.getWidth() / 2, -wallTopSize.y / 2);
-        SimulatedRectangle wallTop = new SimulatedRectangle(wallTopSize, wallTopPos, simulationSpace);
-
-        Vector2 wallLeftSize = new Vector2(100, scene.getHeight());
-        Vector2 wallLeftPos = new Vector2(-wallLeftSize.x / 2, scene.getHeight() / 2);
-        SimulatedRectangle wallLeft = new SimulatedRectangle(wallLeftSize, wallLeftPos, simulationSpace);
-
-        Vector2 wallRightSize = new Vector2(100, scene.getHeight());
-        Vector2 wallRightPos = new Vector2(scene.getWidth() + wallRightSize.x / 2, scene.getHeight() / 2);
-        SimulatedRectangle wallRight = new SimulatedRectangle(wallRightSize, wallRightPos, simulationSpace);
-
-        // Bricks
-        Vector2 brickSize = new Vector2(60,24);
-        ArrayList<SimulatedShape> bricks = new ArrayList<>();
-        for (int x = 0; x < 20; x++) {
-            for (int y = 0; y < 5; y++) {
-                Vector2 brickPos = new Vector2((brickSize.x + 4) * (x + 0.5), (brickSize.y + 4) * (y + 0.5));
-                SimulatedRectangle brick = new SimulatedRectangle(brickSize, brickPos, simulationSpace);
-                bricks.add(brick);
-                brick.setOnCollide(collision -> {
-                    bricks.remove(brick);
-                    if (collision.collidedShape == ball) {
-                        Platform.runLater(() -> {
-                            simulationSpace.remove(brick);
-                        });
-                    }
-                });
-            }
-        }
-
-        // Debug Text
-        Text cursorPos = new Text();
-        cursorPos.setLayoutX(4);
-        cursorPos.setLayoutY(scene.getHeight() - 110);
-        cursorPos.setText("Cursor: \nBall Pos: \nBall Speed:\nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
-        cursorPos.setFont(Font.font("Courier New", 14));
-        cursorPos.setFill(Color.WHITE);
-        mainPane.getChildren().add(cursorPos);
-
-        // Game Runtime Loop
-        Task gameLoop = new Task<Void>() {
-            @Override
-            protected Void call() {
-                try {
-                    while (!this.isCancelled()) {
-                        // Run simulation if not paused
-                        if (!isPaused) {
-                            if (!simulationSpace.isSimulating()) {
-                                // Move Paddle
-                                Vector2 mouseLocation = inputListener.getMouseLocation();
-                                paddle.moveTo(new Vector2(Math.max(paddle.getSize().x / 2, Math.min(scene.getWidth() - paddle.getSize().x / 2, mouseLocation.x)), paddle.getPosition().y));
-
-                                // Reset Ball if reached bottom
-                                if (ball.getPosition().y > scene.getHeight()) {
-                                    ballSpeed = defaultBallSpeed;
-                                    ball.moveTo(defaultBallPos);
-                                    ball.setVelocity(Vector2.rotationToVector(-90 - maxBallDeflection + Math.random() * maxBallDeflection * 2).product(ballSpeed));
-                                }
-
-                                // Run simulation
-                                simulationSpace.simulate();
-
-                                // Debug Text
-                                Platform.runLater(() -> {
-                                    cursorPos.setText(
-                                            "Cursor: " + mouseLocation
-                                        + "\nBall Pos: (" + Math.floor(ball.getPosition().x) + ", " + Math.floor(ball.getPosition().y)
-                                        + ")\nBall Speed: " + ballSpeed
-                                        + "\nPress [R] to reset ball\nPress [M] to move ball to cursor\nPress [V] to make ball move towards cursor");
-                                });
-
-                                // Reset Ball
-                                if (inputListener.isPressed(KeyCode.R)) {
-                                    ballSpeed = defaultBallSpeed;
-                                    ball.moveTo(defaultBallPos);
-                                    ball.setVelocity(Vector2.rotationToVector(-90 - maxBallDeflection + Math.random() * maxBallDeflection * 2).product(ballSpeed));
-                                }
-                                else if (inputListener.isPressed(KeyCode.M)) {
-                                    ball.moveTo(mouseLocation);
-                                }
-                                else if (inputListener.isPressed(KeyCode.V)) {
-                                    Vector2 dir = mouseLocation.sum(ball.getPosition().product(-1));
-                                    if (dir == Vector2.ZERO) {
-                                        dir = new Vector2(0,-1);
-                                    }
-                                    ball.setVelocity(dir.unit().product(ballSpeed));
-                                    ball.moveTo(ball.getPosition().sum(ball.getVelocity().unit().product(.01)));
-                                }
-                            }
-                        }
-                        Thread.sleep(16);  // ~60hz
-                    }
-                }
-                catch (Exception e) {
-                    // Display any errors that occur during runtime
-                    e.printStackTrace();
-                }
-
-                return null;
-            }
-        };
-
-        gameLoop.setOnCancelled(event -> {
             try {
-                stop();
+                stagesUnlocked = Integer.parseInt(savedDataRead.readLine());
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+                BufferedWriter savedDataWrite = new BufferedWriter(new FileWriter("UnlockedStages.dat"));
+                savedDataWrite.write(Integer.toString(stagesUnlocked));
+                savedDataWrite.flush();
+                savedDataWrite.close();
             }
-            catch (Exception e) {
-                System.out.println(e);
+        }
+        catch (FileNotFoundException e) {
+            try {
+                BufferedWriter savedDataWrite = new BufferedWriter(new FileWriter("UnlockedStages.dat"));
+                savedDataWrite.write(Integer.toString(stagesUnlocked));
+                savedDataWrite.flush();
+                savedDataWrite.close();
             }
-        });
+            catch (IOException e2) {
+                e2.printStackTrace();
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
 
+        // Room selection buttons
+        GridPane roomSelection = new GridPane();
+        roomSelection.setPrefSize(mainMenu.getWidth() * 2 / 3, mainMenu.getHeight() / 3);
+        roomSelection.setLayoutX(mainMenu.getWidth() / 6);
+        roomSelection.setLayoutY(mainMenu.getHeight() / 2);
+        roomSelection.setAlignment(Pos.CENTER);
+        roomSelection.setHgap(10);
+        roomSelection.setVgap(10);
+
+        this.roomButtons = new ArrayList<>();
+
+        for (int y = 0; y < 2; y++) {
+            for (int x = 0; x < 3; x++) {
+                int roomNumber = y * 3 + x + 1;
+                Button roomButton = new Button("Room " + roomNumber);
+                roomButton.setPrefSize(roomSelection.getPrefWidth() / 3, roomSelection.getPrefWidth() / 2);
+                roomButton.setTextFill(Color.WHITE);
+                roomButton.setFont(new Font("Arial", 20));
+                roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
+
+                if (stagesUnlocked < roomNumber) {
+                    roomButton.setText("Locked");
+                }
+
+                roomButton.setOnMouseClicked(event -> {
+                    playRoom(roomNumber);
+                });
+                roomSelection.add(roomButton, x, y);
+                roomButtons.add(roomButton);
+            }
+        }
+
+        mainMenuPane.getChildren().add(roomSelection);
+
+        // Stop application on window closed
         primaryStage.setOnCloseRequest(event -> {
-            if (gameLoop.isRunning()) {
-                gameLoop.cancel();
+            if (currentRoom != null) {
+                currentRoom.stop();
+                currentRoom = null;
             }
+            System.exit(0);
         });
 
-        // Pause on cursor off-screen
-        scene.setOnMouseExited(input -> {
-            setPaused(true);
-        });
-
-        scene.setOnMouseEntered(input -> {
-            simulationSpace.resetTick();
-            setPaused(false);
-        });
-
-        // Show Scene
-        primaryStage.setTitle("Breakout");
-        primaryStage.setScene(scene);
+        // Show app window
+        primaryStage.setScene(mainMenu);
         primaryStage.show();
-
-        // Run game loop
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.execute(gameLoop);
     }
-
 
     public static void main(String[] args) {
         launch(args);
