@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp spec="1.0" xmlns:jfx="http://javafx.com" href="Breakout.jnlp">
+  <information>
+    <title>BreakoutFX</title>
+    <vendor>SecondLogic</vendor>
+    <description>Breakout in JavaFX Amos C.</description>
+    <offline-allowed/>
+  </information>
+  <resources>
+    <j2se version="1.6+" href="http://java.sun.com/products/autodl/j2se"/>
+    <jar href="Breakout.jar" size="49283" download="eager" />
+    <jar href="gson-2.8.6.jar" size="240255" download="eager" />
+  </resources>
+  <jfx:javafx-desc  width="1280" height="720" main-class="Game.Main"  name="Breakout" />
+  <update check="background"/>
+</jnlp>

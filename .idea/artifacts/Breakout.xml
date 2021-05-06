@@ -1,0 +1,25 @@
+<component name="ArtifactManager">
+  <artifact type="javafx" name="Breakout">
+    <output-path>$PROJECT_DIR$/out/artifacts/Breakout</output-path>
+    <properties id="javafx-properties">
+      <options>
+        <option name="appClass" value="Game.Main" />
+        <option name="description" value="Breakout in JavaFX&#13;&#10;Amos C." />
+        <option name="height" value="720" />
+        <option name="htmlPlaceholderId" value="" />
+        <option name="title" value="BreakoutFX" />
+        <option name="vendor" value="SecondLogic" />
+        <option name="version" value="1.0" />
+        <option name="width" value="1280" />
+      </options>
+    </properties>
+    <root id="root">
+      <element id="archive" name="Breakout.jar">
+        <element id="module-output" name="Breakout" />
+      </element>
+      <element id="file-copy" path="$APPLICATION_HOME_DIR$/lib/gson-2.8.6.jar" />
+      <element id="file-copy" path="$PROJECT_DIR$/UnlockedStages.dat" />
+      <element id="file-copy" path="$PROJECT_DIR$/Rooms.json" />
+    </root>
+  </artifact>
+</component>

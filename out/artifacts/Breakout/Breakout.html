@@ -1,0 +1,43 @@
+<html><head>
+  <SCRIPT src="http://java.com/js/dtjava.js"></SCRIPT>
+<script>
+    function launchApplication(jnlpfile) {
+        dtjava.launch(            {
+                url : 'Breakout.jnlp'
+            },
+            {
+                javafx : '8.0+'
+            },
+            {}
+        );
+        return false;
+    }
+</script>
+
+<script>
+    function javafxEmbedBreakout_id() {
+        dtjava.embed(
+            {
+                id : 'Breakout_id',
+                url : 'Breakout.jnlp',
+                placeholder : 'javafx-app-placeholder',
+                width : '1280',
+                height : '720'
+            },
+            {
+                javafx : '8.0+'
+            },
+            {}
+        );
+    }
+    <!-- Embed FX application into web page once page is loaded -->
+    dtjava.addOnloadCallback(javafxEmbedBreakout_id);
+</script>
+
+</head><body>
+<h2>Test page for <b>Breakout</b></h2>
+  <b>Webstart:</b> <a href='Breakout.jnlp' onclick="return launchApplication('Breakout.jnlp');">click to launch this app as webstart</a><br><hr><br>
+
+  <!-- Applet will be inserted here -->
+  <div id='javafx-app-placeholder'></div>
+</body></html>
