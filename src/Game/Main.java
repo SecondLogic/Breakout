@@ -46,9 +46,13 @@ public class Main extends Application {
             Button roomButton = roomButtons.get(i - 1);
             if (i <= stagesUnlocked) {
                 roomButton.setText("Room " + i);
+                roomButton.setTextFill(Color.WHITE);
+                roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
             }
             else {
                 roomButton.setText("Locked");
+                roomButton.setTextFill(Color.valueOf("#808080"));
+                roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: #808080; -fx-border-width: 4;");
             }
             final int roomNumber = i;
             roomButton.setOnMouseClicked(event -> {
@@ -154,7 +158,7 @@ public class Main extends Application {
         GridPane roomSelection = new GridPane();
         roomSelection.setPrefSize(mainMenu.getWidth() * 2 / 3, mainMenu.getHeight() / 3);
         roomSelection.setLayoutX(mainMenu.getWidth() / 6);
-        roomSelection.setLayoutY(mainMenu.getHeight() / 2);
+        roomSelection.setLayoutY(mainMenu.getHeight() / 2.5);
         roomSelection.setAlignment(Pos.CENTER);
         roomSelection.setHgap(10);
         roomSelection.setVgap(10);
@@ -167,12 +171,15 @@ public class Main extends Application {
 
             Button roomButton = new Button("Room " + roomNumber);
             roomButton.setPrefSize(roomSelection.getPrefWidth() / 3, roomSelection.getPrefWidth() / 2);
-            roomButton.setTextFill(Color.WHITE);
+
             roomButton.setFont(new Font("Arial", 20));
+            roomButton.setTextFill(Color.WHITE);
             roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
 
             if (stagesUnlocked < roomNumber) {
                 roomButton.setText("Locked");
+                roomButton.setTextFill(Color.valueOf("#808080"));
+                roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: #808080; -fx-border-width: 4;");
             }
 
             final int roomIndex = roomNumber;
@@ -189,14 +196,32 @@ public class Main extends Application {
         Button unlockAll = new Button("Unlock All Rooms");
         unlockAll.setPrefSize(mainMenu.getWidth() / 5, mainMenu.getHeight() / 20);
         unlockAll.setLayoutX(mainMenu.getWidth() / 2 - mainMenu.getWidth() / 10);
-        unlockAll.setLayoutY(mainMenu.getHeight() * .9);
+        unlockAll.setLayoutY(mainMenu.getHeight() * .8);
         unlockAll.setTextFill(Color.WHITE);
         unlockAll.setFont(new Font("Arial", 20));
         unlockAll.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
         unlockAll.setOnMouseClicked(event -> {
             setUnlocked(roomList.length);
+            mainMenuPane.getChildren().remove(unlockAll);
         });
         mainMenuPane.getChildren().add(unlockAll);
+
+        // Exit button
+        Button exitBtn = new Button("Quit Game");
+        exitBtn.setPrefSize(mainMenu.getWidth() / 5, mainMenu.getHeight() / 20);
+        exitBtn.setLayoutX(mainMenu.getWidth() / 2 - mainMenu.getWidth() / 10);
+        exitBtn.setLayoutY(mainMenu.getHeight() * .875);
+        exitBtn.setTextFill(Color.WHITE);
+        exitBtn.setFont(new Font("Arial", 20));
+        exitBtn.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
+        exitBtn.setOnMouseClicked(event -> {
+            if (currentRoom != null) {
+                currentRoom.stop();
+                currentRoom = null;
+            }
+            System.exit(0);
+        });
+        mainMenuPane.getChildren().add(exitBtn);
 
         // Stop application on window closed
         primaryStage.setOnCloseRequest(event -> {
@@ -208,6 +233,7 @@ public class Main extends Application {
         });
 
         // Show app window
+        primaryStage.setResizable(false);
         primaryStage.setTitle("BreakoutFX");
         primaryStage.setScene(mainMenu);
         primaryStage.show();

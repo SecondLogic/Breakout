@@ -8,7 +8,7 @@
   </information>
   <resources>
     <j2se version="1.6+" href="http://java.sun.com/products/autodl/j2se"/>
-    <jar href="Breakout.jar" size="49283" download="eager" />
+    <jar href="Breakout.jar" size="49621" download="eager" />
     <jar href="gson-2.8.6.jar" size="240255" download="eager" />
   </resources>
   <jfx:javafx-desc  width="1280" height="720" main-class="Game.Main"  name="Breakout" />
