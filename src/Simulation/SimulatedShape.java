@@ -63,7 +63,9 @@ public abstract class SimulatedShape implements BoundedObject {
     }
 
     private BoundingBox getShapeBounds() {
-        return new BoundingBox(position.sum(size.product(-.5)), position.sum(size.product(.5)));
+        Vector2 rotatedSize = size.product(.5).rotate(this.rotation);
+        rotatedSize = new Vector2(Math.abs(rotatedSize.x), Math.abs(rotatedSize.y));
+        return new BoundingBox(position.sum(rotatedSize.product(-1)), position.sum(rotatedSize));
     }
 
     public void updateBoundsWithVelocity(double deltaTime) {
@@ -125,7 +127,13 @@ public abstract class SimulatedShape implements BoundedObject {
 
     public double getRotation() { return this.rotation; }
 
-    public void setRotation(double rotation) { this.rotation = rotation % 360; }
+    public void setRotation(double rotation) {
+        if (this.rotation != rotation) {
+            this.rotation = rotation % 360;
+            this.changed = true;
+            this.bounds = getShapeBounds();
+        }
+    }
 
     public void setOnCollide(SimulationEventHandler<ShapeCollision> collisionEvent) {
         this.onCollide = collisionEvent;

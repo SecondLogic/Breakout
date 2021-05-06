@@ -63,7 +63,7 @@ public class BreakoutBall extends SimulatedCircle {
 
     public void incrementBallSpeed(SimulatedShape collided) {
         if (collided != lastCollided) {
-            speed += this.room.getSettings().getBallSpeedIncrement();
+            speed += Math.min(this.room.getSettings().getBallSpeedIncrement(), this.room.getSettings().getMaxBallSpeed());
             lastCollided = collided;
         }
     }
@@ -73,6 +73,8 @@ public class BreakoutBall extends SimulatedCircle {
         this.speed = settings.getDefaultBallSpeed();
         this.setVelocity(Vector2.rotationToVector(-90 - settings.getMaxBallDeflection() + Math.random() * settings.getMaxBallDeflection() * 2).product(this.speed));
     }
+
+    public SimulatedShape getLastCollided() { return lastCollided; }
 
     @Override
     public void moveTo(Vector2 position) {

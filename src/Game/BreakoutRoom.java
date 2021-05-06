@@ -20,6 +20,7 @@ import Structures.Vector2;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -28,7 +29,13 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,6 +49,7 @@ public class BreakoutRoom {
     private final Task gameLoop;
     private final Scene scene;
     private final Runnable onExit;
+    private final Runnable onAdvance;
     private int turns;
     private double waitDuration;
     private boolean gamePaused;
@@ -52,8 +60,9 @@ public class BreakoutRoom {
     private Text turnsDisplay;
     private Text gameMsgDisplay;
 
-    public BreakoutRoom(Main game, BreakoutRoomSettings settings, Runnable onExit) {
+    public BreakoutRoom(Main game, BreakoutRoomSettings settings, Runnable onExit, Runnable onAdvance) {
         this.onExit = onExit;
+        this.onAdvance = onAdvance;
         this.balls = new ArrayList<>();
         this.bricks = new ArrayList<>();
         this.settings = settings;
@@ -84,7 +93,7 @@ public class BreakoutRoom {
         this.gameMsgDisplay.setFont(new Font("Arial Bold", this.scene.getHeight() / 8));
         this.gameMsgDisplay.setTextAlignment(TextAlignment.CENTER);
         this.gameMsgDisplay.setFill(Color.WHITE);
-        mainPane.getChildren().add(this.gameMsgDisplay);
+
 
         this.turnsDisplay = new Text();
         this.turnsDisplay.setLayoutX(8);
@@ -92,7 +101,6 @@ public class BreakoutRoom {
         this.turnsDisplay.setFont(new Font("Arial", this.scene.getHeight() / 36));
         this.turnsDisplay.setFill(Color.WHITE);
         this.turnsDisplay.setText("Turns Left: " + this.turns + "\n[P] Pause\n[X] Main Menu");
-        mainPane.getChildren().add(this.turnsDisplay);
 
         // Walls (off-screen)
         Vector2 wallTopSize = new Vector2(scene.getWidth(), 100);
@@ -109,8 +117,8 @@ public class BreakoutRoom {
 
         // Bricks
         Vector2 brickSize = new Vector2(60,24);
-        for (Vector2[] brickData : this.settings.getBrickData()) {
-            new BreakoutBrick(brickData[0], brickData[1], this);
+        for (BreakoutBrickSettings brickData : this.settings.getBrickData()) {
+            new BreakoutBrick(brickData, this);
         }
 
         // Paddle
@@ -122,6 +130,11 @@ public class BreakoutRoom {
         new BreakoutBall(this.settings.getBallRadius(), defaultBallPos, this);
 
         this.pauseWait(3);
+
+        Platform.runLater(() -> {
+            mainPane.getChildren().add(this.gameMsgDisplay);
+            mainPane.getChildren().add(this.turnsDisplay);
+        });
 
         // Game Runtime Loop
         this.gameLoop = new Task<Void>() {
@@ -211,8 +224,43 @@ public class BreakoutRoom {
         this.waitDuration = duration;
     }
 
+    public void showExitButton() {
+        Button exitBtn = new Button("Main Menu");
+        exitBtn.setPrefSize(this.scene.getWidth() / 5, this.scene.getHeight() / 20);
+        exitBtn.setLayoutX(this.scene.getWidth() / 2 - this.scene.getWidth() / 10);
+        exitBtn.setLayoutY(this.scene.getHeight() * .875);
+        exitBtn.setTextFill(Color.WHITE);
+        exitBtn.setFont(new Font("Arial", 20));
+        exitBtn.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
+        exitBtn.setOnMouseClicked(event -> {
+            this.gameLoop.cancel();
+            this.onExit.run();
+        });
+        Platform.runLater(() -> {
+            ((Pane) this.scene.getRoot()).getChildren().add(exitBtn);
+        });
+    }
+
+    public void showAdvanceButton() {
+        Button advanceBtn = new Button("Next Room");
+        advanceBtn.setPrefSize(this.scene.getWidth() / 5, this.scene.getHeight() / 20);
+        advanceBtn.setLayoutX(this.scene.getWidth() / 2 - this.scene.getWidth() / 10);
+        advanceBtn.setLayoutY(this.scene.getHeight() * .8);
+        advanceBtn.setTextFill(Color.WHITE);
+        advanceBtn.setFont(new Font("Arial", 20));
+        advanceBtn.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
+        advanceBtn.setOnMouseClicked(event -> {
+            this.gameLoop.cancel();
+            this.onAdvance.run();
+        });
+        Platform.runLater(() -> {
+            ((Pane) this.scene.getRoot()).getChildren().add(advanceBtn);
+        });
+    }
+
     public void add(BreakoutBrick brick) {
         if (!this.bricks.contains(brick)) {
+            brick.updateColor();
             this.bricks.add(brick);
             this.simulationSpace.add(brick);
         }
@@ -277,6 +325,8 @@ public class BreakoutRoom {
                 this.gameMsgDisplay.setText("Room Clear!");
                 this.gameMsgDisplay.setLayoutX(this.scene.getWidth() / 2 - this.gameMsgDisplay.getLayoutBounds().getWidth() / 2);
             });
+            showAdvanceButton();
+            showExitButton();
         }
         Platform.runLater(() -> {
             this.simulationSpace.remove(brick);
@@ -294,6 +344,7 @@ public class BreakoutRoom {
                     this.gameMsgDisplay.setText("Game Over");
                     this.gameMsgDisplay.setLayoutX(scene.getWidth() / 2 - this.gameMsgDisplay.getLayoutBounds().getWidth() / 2);
                 });
+                showExitButton();
             }
             else {
                 Vector2 defaultBallPos = new Vector2(scene.getWidth() / 2, this.paddle.getPosition().y - this.paddle.getSize().y / 2 - this.settings.getBallRadius() - 2);

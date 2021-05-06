@@ -21,8 +21,16 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import java.util.ArrayList;
+
+import com.google.gson.Gson;
 
 public class Main extends Application {
     private int stagesUnlocked = 1;
@@ -30,6 +38,7 @@ public class Main extends Application {
     private Stage primaryStage;
     private Scene mainMenu;
     private ArrayList<Button> roomButtons;
+    private BreakoutRoomSettings[] roomList;
 
     public void setUnlocked(int stage) {
         stagesUnlocked = Math.max(stagesUnlocked, stage);
@@ -49,25 +58,85 @@ public class Main extends Application {
     }
 
     public void playRoom(int roomNumber) {
-        if (roomNumber <= stagesUnlocked) {
+        if (roomNumber > 0 && roomNumber <= roomList.length && roomNumber <= stagesUnlocked) {
             if (currentRoom != null) {
                 currentRoom.stop();
             }
 
-            currentRoom = new BreakoutRoom(this, new BreakoutRoomSettings(), () -> {
+            currentRoom = new BreakoutRoom(this, this.roomList[roomNumber - 1],
+            () -> {
                 currentRoom = null;
                 Platform.runLater(() ->{
                     primaryStage.setScene(mainMenu);
                 });
+            },
+            () -> {
+                setUnlocked(roomNumber + 1);
+                playRoom(roomNumber + 1);
             });
             currentRoom.play(primaryStage);
         }
+        else {
+            currentRoom = null;
+            primaryStage.setScene(mainMenu);
+        }
+    }
+
+    public BreakoutRoomSettings[] loadRooms() throws Exception {
+        Gson gson = new Gson();
+
+        BufferedReader roomSettingsReader = new BufferedReader(new FileReader("Rooms.json"));
+        return gson.fromJson(roomSettingsReader, BreakoutRoomSettings[].class);
+    }
+
+    public int loadUnlockedStages() {
+        int unlocked = 1;
+        try {
+            BufferedReader savedDataRead = new BufferedReader(new FileReader("UnlockedStages.dat"));
+
+            try {
+                unlocked = Integer.parseInt(savedDataRead.readLine());
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+                BufferedWriter savedDataWrite = new BufferedWriter(new FileWriter("UnlockedStages.dat"));
+                savedDataWrite.write(Integer.toString(unlocked));
+                savedDataWrite.flush();
+                savedDataWrite.close();
+            }
+        }
+        catch (FileNotFoundException e) {
+            try {
+                BufferedWriter savedDataWrite = new BufferedWriter(new FileWriter("UnlockedStages.dat"));
+                savedDataWrite.write(Integer.toString(unlocked));
+                savedDataWrite.flush();
+                savedDataWrite.close();
+            }
+            catch (IOException e2) {
+                e2.printStackTrace();
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return unlocked;
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        this.primaryStage = primaryStage;
+        // Load Room Settings
+        try {
+            this.roomList = loadRooms();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            System.exit(0);
+        }
 
+        // Read saved data
+        this.stagesUnlocked = loadUnlockedStages();
+
+        // Create Main Menu
+        this.primaryStage = primaryStage;
         Pane mainMenuPane = new Pane();
         mainMenuPane.setStyle("-fx-background-color: #000000;");
         this.mainMenu = new Scene(mainMenuPane, 1280, 720);
@@ -81,35 +150,6 @@ public class Main extends Application {
         title.setLayoutY(mainMenu.getHeight() * .333 - title.getLayoutBounds().getHeight() / 2);
         mainMenuPane.getChildren().add(title);
 
-        // Read saved data
-        try {
-            BufferedReader savedDataRead = new BufferedReader(new FileReader("UnlockedStages.dat"));
-
-            try {
-                stagesUnlocked = Integer.parseInt(savedDataRead.readLine());
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
-                BufferedWriter savedDataWrite = new BufferedWriter(new FileWriter("UnlockedStages.dat"));
-                savedDataWrite.write(Integer.toString(stagesUnlocked));
-                savedDataWrite.flush();
-                savedDataWrite.close();
-            }
-        }
-        catch (FileNotFoundException e) {
-            try {
-                BufferedWriter savedDataWrite = new BufferedWriter(new FileWriter("UnlockedStages.dat"));
-                savedDataWrite.write(Integer.toString(stagesUnlocked));
-                savedDataWrite.flush();
-                savedDataWrite.close();
-            }
-            catch (IOException e2) {
-                e2.printStackTrace();
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-
         // Room selection buttons
         GridPane roomSelection = new GridPane();
         roomSelection.setPrefSize(mainMenu.getWidth() * 2 / 3, mainMenu.getHeight() / 3);
@@ -121,28 +161,42 @@ public class Main extends Application {
 
         this.roomButtons = new ArrayList<>();
 
-        for (int y = 0; y < 2; y++) {
-            for (int x = 0; x < 3; x++) {
-                int roomNumber = y * 3 + x + 1;
-                Button roomButton = new Button("Room " + roomNumber);
-                roomButton.setPrefSize(roomSelection.getPrefWidth() / 3, roomSelection.getPrefWidth() / 2);
-                roomButton.setTextFill(Color.WHITE);
-                roomButton.setFont(new Font("Arial", 20));
-                roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
+        for (int roomNumber = 1; roomNumber <= this.loadRooms().length; roomNumber++) {
+            int x = (roomNumber - 1) % 3;
+            int y = (roomNumber - 1) / 3;
 
-                if (stagesUnlocked < roomNumber) {
-                    roomButton.setText("Locked");
-                }
+            Button roomButton = new Button("Room " + roomNumber);
+            roomButton.setPrefSize(roomSelection.getPrefWidth() / 3, roomSelection.getPrefWidth() / 2);
+            roomButton.setTextFill(Color.WHITE);
+            roomButton.setFont(new Font("Arial", 20));
+            roomButton.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
 
-                roomButton.setOnMouseClicked(event -> {
-                    playRoom(roomNumber);
-                });
-                roomSelection.add(roomButton, x, y);
-                roomButtons.add(roomButton);
+            if (stagesUnlocked < roomNumber) {
+                roomButton.setText("Locked");
             }
+
+            final int roomIndex = roomNumber;
+            roomButton.setOnMouseClicked(event -> {
+                playRoom(roomIndex);
+            });
+            roomSelection.add(roomButton, x, y);
+            roomButtons.add(roomButton);
         }
 
         mainMenuPane.getChildren().add(roomSelection);
+
+        // Cheat button
+        Button unlockAll = new Button("Unlock All Rooms");
+        unlockAll.setPrefSize(mainMenu.getWidth() / 5, mainMenu.getHeight() / 20);
+        unlockAll.setLayoutX(mainMenu.getWidth() / 2 - mainMenu.getWidth() / 10);
+        unlockAll.setLayoutY(mainMenu.getHeight() * .9);
+        unlockAll.setTextFill(Color.WHITE);
+        unlockAll.setFont(new Font("Arial", 20));
+        unlockAll.setStyle("-fx-background-color: black; -fx-smooth: false; -fx-border-color: white; -fx-border-width: 4;");
+        unlockAll.setOnMouseClicked(event -> {
+            setUnlocked(roomList.length);
+        });
+        mainMenuPane.getChildren().add(unlockAll);
 
         // Stop application on window closed
         primaryStage.setOnCloseRequest(event -> {
@@ -154,6 +208,7 @@ public class Main extends Application {
         });
 
         // Show app window
+        primaryStage.setTitle("BreakoutFX");
         primaryStage.setScene(mainMenu);
         primaryStage.show();
     }
